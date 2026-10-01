@@ -62,7 +62,7 @@ object ToolCatalog {
         ToolCapability("checkpoint.restore", ToolFamily.ARCHIVE, "Restaurar checkpoint", CapabilityStatus.BUILT_IN),
 
         ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git local cuando el runtime tenga el binario", CapabilityStatus.READY_TO_ADAPT, "git/git"),
-        ToolCapability("code.ast.*", ToolFamily.CODE_INTELLIGENCE, "AST incremental", CapabilityStatus.READY_TO_ADAPT, "tree-sitter/tree-sitter"),
+        ToolCapability("code.ast.parse", ToolFamily.CODE_INTELLIGENCE, "AST con Tree-sitter cuando hay gramática", CapabilityStatus.BUILT_IN, "tree-sitter/tree-sitter"),
         ToolCapability("python.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar script/código Python", CapabilityStatus.BUILT_IN),
         ToolCapability("python.test", ToolFamily.CODE_INTELLIGENCE, "Ejecutar pytest", CapabilityStatus.BUILT_IN),
         ToolCapability("node.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar JS/TS con Node", CapabilityStatus.BUILT_IN),

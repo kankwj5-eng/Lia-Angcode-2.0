@@ -1,0 +1,9 @@
+{
+  "id": "native-dev",
+  "name": "Native C/C++",
+  "version": "0.1.0",
+  "description": "Compilación nativa con Clang, CMake y Ninja.",
+  "packages": ["clang", "cmake", "ninja", "pkg-config", "git"],
+  "tools": ["clang.build", "cmake.configure", "ninja.build", "git.status", "code.search", "process.logs"],
+  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE"]
+}

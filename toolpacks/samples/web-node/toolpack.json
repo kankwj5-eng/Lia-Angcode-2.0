@@ -1,0 +1,9 @@
+{
+  "id": "web-node",
+  "name": "Web + Node",
+  "version": "0.1.0",
+  "description": "Node.js, paquetes JS/TS y navegador agentico.",
+  "packages": ["nodejs-lts", "git", "ripgrep"],
+  "tools": ["node.run", "npm.run", "git.status", "git.diff", "code.search", "browser.lightpanda.*"],
+  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE", "NETWORK"]
+}

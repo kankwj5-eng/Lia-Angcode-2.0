@@ -63,4 +63,8 @@ fun ToolBroker.registerAndroidTools(context: Context): ToolBroker = apply {
     register(AndroidBatteryTool(app))
     register(ClipboardReadTool(app))
     register(ClipboardWriteTool(app))
+
+    val toolPacks = ToolPackAssetRepository(app)
+    register(ToolPackListTool(toolPacks))
+    register(ToolPackInspectTool(toolPacks))
 }

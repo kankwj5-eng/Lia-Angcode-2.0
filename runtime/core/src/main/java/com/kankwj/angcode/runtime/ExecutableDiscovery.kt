@@ -70,7 +70,8 @@ class ExecutableDiscovery(
             "tar" to listOf("tar"),
             "unzip" to listOf("unzip"),
             "llama-cli" to listOf("llama-cli"),
-            "llama-server" to listOf("llama-server")
+            "llama-server" to listOf("llama-server"),
+            "tree-sitter" to listOf("tree-sitter")
         )
 
         fun forApp(context: Context): ExecutableDiscovery {

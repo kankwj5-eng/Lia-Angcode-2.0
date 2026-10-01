@@ -6,24 +6,6 @@ import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
 
-class AndroidDeviceInfoTool : AgentTool {
-    override val id = "android.device.info"
-    override val description = "Devuelve información básica del dispositivo y ABI."
-    override val requiredPermissions = setOf(ToolPermission.ANDROID_BRIDGE)
-
-    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val output = listOf(
-            "manufacturer=" + Build.MANUFACTURER,
-            "model=" + Build.MODEL,
-            "device=" + Build.DEVICE,
-            "android=" + Build.VERSION.RELEASE,
-            "api=" + Build.VERSION.SDK_INT,
-            "abis=" + Build.SUPPORTED_ABIS.joinToString(",")
-        ).joinToString("\n")
-        return ToolResponse(true, output)
-    }
-}
-
 class AndroidBatteryTool(
     private val appContext: Context
 ) : AgentTool {
@@ -78,7 +60,6 @@ class ClipboardWriteTool(
 
 fun ToolBroker.registerAndroidTools(context: Context): ToolBroker = apply {
     val app = context.applicationContext
-    register(AndroidDeviceInfoTool())
     register(AndroidBatteryTool(app))
     register(ClipboardReadTool(app))
     register(ClipboardWriteTool(app))

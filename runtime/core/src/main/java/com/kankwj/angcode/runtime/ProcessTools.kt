@@ -59,6 +59,9 @@ class ProcessRegistry {
     fun list(): List<ManagedProcessSnapshot> =
         entries.keys.mapNotNull(::snapshot).sortedBy { it.id }
 
+    fun listSnapshots(): List<ManagedProcessSnapshot> =
+        entries.keys.mapNotNull(::snapshot)
+
     fun stop(id: String): Boolean {
         val entry = entries[id] ?: return false
         if (entry.process.isAlive) {

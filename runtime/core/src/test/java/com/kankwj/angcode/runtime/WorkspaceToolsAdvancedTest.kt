@@ -4,6 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class WorkspaceToolsAdvancedTest {
     private fun context(root: File) = ToolContext(
@@ -13,7 +14,7 @@ class WorkspaceToolsAdvancedTest {
 
     @Test
     fun searchFindsTextInsideWorkspace() {
-        val root = createTempDir(prefix = "angcode-search-")
+        val root = createTempDirectory("angcode-search-").toFile()
         File(root, "src").mkdirs()
         File(root, "src/Main.kt").writeText("fun main() { println(\"needle\") }")
 
@@ -28,11 +29,11 @@ class WorkspaceToolsAdvancedTest {
 
     @Test
     fun patchRejectsAmbiguousReplacement() {
-        val root = createTempDir(prefix = "angcode-patch-")
+        val root = createTempDirectory("angcode-patch-").toFile()
         File(root, "a.txt").writeText("x x")
 
         val response = FilePatchTool().invoke(
-            ToolCall("file.patch", mapOf("path" to "a.txt", "find" to "x", "replace" to "y")),
+            ToolCall("file.patch", mapOf("path" to "a.txt", "old" to "x", "new" to "y")),
             context(root)
         )
 

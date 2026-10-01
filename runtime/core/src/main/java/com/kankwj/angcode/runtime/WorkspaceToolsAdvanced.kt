@@ -2,44 +2,43 @@ package com.kankwj.angcode.runtime
 
 class WorkspaceSearchTool : AgentTool {
     override val id = "workspace.search"
-    override val description = "Busca texto en archivos del workspace sin salir de la carpeta del proyecto."
+    override val description = "Busca texto recursivamente con límites configurables dentro del workspace."
     override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val query = call.arguments["query"]?.takeIf { it.isNotEmpty() }
             ?: return ToolResponse(false, "Falta query")
-        val path = call.arguments["path"].orEmpty()
+        val base = safeWorkspaceFile(context.workspace, call.arguments["path"].orEmpty())
+        if (!base.exists()) return ToolResponse(false, "Ruta no encontrada")
+
         val maxResults = call.arguments["maxResults"]?.toIntOrNull()?.coerceIn(1, 500) ?: 100
         val maxFileBytes = call.arguments["maxFileBytes"]?.toLongOrNull()?.coerceIn(1, 2_000_000) ?: 500_000
-
-        val root = safeWorkspaceFile(context.workspace, path)
-        if (!root.exists()) return ToolResponse(false, "La ruta no existe: " + path)
-
-        val matches = mutableListOf<String>()
-        val files = if (root.isFile) {
-            sequenceOf(root)
-        } else {
-            root.walkTopDown().asSequence().filter { it.isFile }
-        }
+        val out = ArrayList<String>()
+        var scanned = 0
+        val files = if (base.isFile) sequenceOf(base) else base.walkTopDown().asSequence()
 
         for (file in files) {
-            if (matches.size >= maxResults) break
-            if (file.length() > maxFileBytes) continue
-            if (file.name.startsWith(".") && file.parentFile?.name == ".git") continue
+            if (out.size >= maxResults || scanned >= 5_000) break
+            if (!file.isFile || file.length() > maxFileBytes) continue
+            if (file.toPath().any { it.toString() == ".git" }) continue
+            scanned++
 
-            val text = runCatching { file.readText() }.getOrNull() ?: continue
-            text.lineSequence().forEachIndexed { index, line ->
-                if (matches.size < maxResults && line.contains(query, ignoreCase = true)) {
-                    val relative = file.relativeTo(context.workspace.canonicalFile).path
-                    matches += relative + ":" + (index + 1) + ":" + line.take(300)
+            runCatching {
+                file.bufferedReader().useLines { lines ->
+                    lines.forEachIndexed { index, line ->
+                        if (out.size < maxResults && line.contains(query, ignoreCase = true)) {
+                            val rel = file.relativeTo(context.workspace.canonicalFile).path
+                            out += rel + ":" + (index + 1) + ":" + line.take(300)
+                        }
+                    }
                 }
             }
         }
 
         return ToolResponse(
-            ok = true,
-            output = matches.joinToString("\n"),
-            metadata = mapOf("matches" to matches.size.toString())
+            true,
+            out.joinToString("\n"),
+            mapOf("matches" to out.size.toString(), "filesScanned" to scanned.toString())
         )
     }
 }

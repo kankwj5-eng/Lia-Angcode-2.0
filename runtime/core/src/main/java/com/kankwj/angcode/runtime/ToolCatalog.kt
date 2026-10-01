@@ -48,7 +48,7 @@ object ToolCatalog {
         ToolCapability("checkpoint.restore", ToolFamily.ARCHIVE, "Restaurar checkpoint", CapabilityStatus.BUILT_IN),
         ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git dentro del sandbox", CapabilityStatus.READY_TO_ADAPT, "git/git"),
         ToolCapability("code.ast.*", ToolFamily.CODE_INTELLIGENCE, "AST incremental", CapabilityStatus.READY_TO_ADAPT, "tree-sitter/tree-sitter"),
-        ToolCapability("android.device.info", ToolFamily.ANDROID, "Información del dispositivo", CapabilityStatus.BUILT_IN),
+        ToolCapability("android.device_info", ToolFamily.ANDROID, "Información del dispositivo", CapabilityStatus.BUILT_IN),
         ToolCapability("android.battery", ToolFamily.ANDROID, "Estado de batería", CapabilityStatus.BUILT_IN),
         ToolCapability("android.clipboard.read", ToolFamily.ANDROID, "Leer portapapeles", CapabilityStatus.BUILT_IN),
         ToolCapability("android.clipboard.write", ToolFamily.ANDROID, "Escribir portapapeles", CapabilityStatus.BUILT_IN),

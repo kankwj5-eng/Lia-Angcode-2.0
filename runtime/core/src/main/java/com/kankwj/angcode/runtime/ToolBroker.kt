@@ -10,7 +10,9 @@ enum class ToolPermission {
     UNRESTRICTED_SHELL,
     NETWORK,
     PRIVATE_NETWORK,
-    ANDROID_BRIDGE
+    ANDROID_BRIDGE,
+    CLIPBOARD_READ,
+    CLIPBOARD_WRITE
 }
 
 data class ToolContext(

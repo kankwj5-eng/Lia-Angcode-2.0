@@ -42,10 +42,13 @@ import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
 import com.kankwj.angcode.agents.AgentRunConfig
 import com.kankwj.angcode.agents.LlamaCliModelGateway
 import com.kankwj.angcode.agents.MissionAnalysis
+import com.kankwj.angcode.agents.MissionCapability
 import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.agents.MissionStateMachine
 import com.kankwj.angcode.agents.ResourceSnapshot
 import com.kankwj.angcode.connectors.ConnectorSessionRegistry
+import com.kankwj.angcode.connectors.shizuku.ShizukuBridgeManager
+import com.kankwj.angcode.connectors.shizuku.registerShizukuTools
 import com.kankwj.angcode.connectors.connectMcp
 import com.kankwj.angcode.runtime.ActiveProjectStore
 import com.kankwj.angcode.runtime.ExecutableDiscovery
@@ -152,6 +155,16 @@ fun MissionExecutionPanel(
                                     )
                                 }
 
+                                val wantsAdvancedAndroid =
+                                    MissionCapability.ANDROID_DEVICE in analysis.capabilities
+                                val shizukuReady =
+                                    wantsAdvancedAndroid &&
+                                        ShizukuBridgeManager.status().serviceBound
+
+                                if (shizukuReady) {
+                                    broker.registerShizukuTools()
+                                }
+
                                 val permissions = mutableSetOf(
                                     ToolPermission.WORKSPACE_READ,
                                     ToolPermission.WORKSPACE_WRITE,
@@ -162,6 +175,9 @@ fun MissionExecutionPanel(
                                 if (browserClient != null) {
                                     permissions += ToolPermission.PRIVATE_NETWORK
                                     permissions += ToolPermission.MCP_EXTERNAL
+                                }
+                                if (shizukuReady) {
+                                    permissions += ToolPermission.SHIZUKU_PRIVILEGED
                                 }
 
                                 val toolContext = ToolContext(

@@ -61,6 +61,16 @@ object ToolCatalog {
 
         ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git local cuando el runtime tenga el binario", CapabilityStatus.READY_TO_ADAPT, "git/git"),
         ToolCapability("code.ast.*", ToolFamily.CODE_INTELLIGENCE, "AST incremental", CapabilityStatus.READY_TO_ADAPT, "tree-sitter/tree-sitter"),
+        ToolCapability("python.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar script/código Python", CapabilityStatus.BUILT_IN),
+        ToolCapability("python.test", ToolFamily.CODE_INTELLIGENCE, "Ejecutar pytest", CapabilityStatus.BUILT_IN),
+        ToolCapability("node.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar JS/TS con Node", CapabilityStatus.BUILT_IN),
+        ToolCapability("npm.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar script npm", CapabilityStatus.BUILT_IN),
+        ToolCapability("json.query", ToolFamily.CODE_INTELLIGENCE, "Consultar JSON local", CapabilityStatus.BUILT_IN),
+        ToolCapability("sqlite.query", ToolFamily.CODE_INTELLIGENCE, "Consulta SQLite de solo lectura", CapabilityStatus.BUILT_IN),
+        ToolCapability("clang.build", ToolFamily.CODE_INTELLIGENCE, "Compilar C/C++ con Clang", CapabilityStatus.BUILT_IN),
+        ToolCapability("cmake.configure", ToolFamily.CODE_INTELLIGENCE, "Configurar proyecto CMake", CapabilityStatus.BUILT_IN),
+        ToolCapability("ninja.build", ToolFamily.CODE_INTELLIGENCE, "Construir con Ninja", CapabilityStatus.BUILT_IN),
+        ToolCapability("android.build", ToolFamily.CODE_INTELLIGENCE, "Ejecutar tarea Gradle Android", CapabilityStatus.BUILT_IN),
 
         ToolCapability("android.device_info", ToolFamily.ANDROID, "Información del dispositivo", CapabilityStatus.BUILT_IN),
         ToolCapability("android.battery", ToolFamily.ANDROID, "Estado de batería", CapabilityStatus.BUILT_IN),

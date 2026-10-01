@@ -114,4 +114,15 @@ fun ToolBroker.registerCoreTools(
     register(ToolCatalogTool())
     register(PackageListTool())
     register(PackageInstallTool())
+
+    register(PythonRunTool())
+    register(PythonTestTool())
+    register(NodeRunTool())
+    register(NpmRunTool())
+    register(JsonQueryTool())
+    register(SqliteQueryTool())
+    register(ClangBuildTool())
+    register(CmakeConfigureTool())
+    register(NinjaBuildTool())
+    register(AndroidGradleBuildTool())
 }

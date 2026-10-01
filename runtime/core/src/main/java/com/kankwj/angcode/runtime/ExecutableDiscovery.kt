@@ -42,6 +42,7 @@ class ExecutableDiscovery(
         val DEFAULT_EXECUTABLES = linkedMapOf(
             "git" to listOf("git"),
             "python" to listOf("python3", "python"),
+            "pip" to listOf("pip3", "pip"),
             "node" to listOf("node"),
             "npm" to listOf("npm"),
             "pnpm" to listOf("pnpm"),
@@ -55,6 +56,8 @@ class ExecutableDiscovery(
             "jq" to listOf("jq"),
             "sqlite3" to listOf("sqlite3"),
             "ffmpeg" to listOf("ffmpeg"),
+            "ffprobe" to listOf("ffprobe"),
+            "magick" to listOf("magick", "convert"),
             "ssh" to listOf("ssh"),
             "curl" to listOf("curl"),
             "apt" to listOf("apt"),

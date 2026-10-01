@@ -1,0 +1,16 @@
+{
+  "id": "local-llm",
+  "name": "Local LLM",
+  "version": "0.1.0",
+  "description": "Inferencia GGUF local con llama.cpp para Director y workers.",
+  "packages": ["llama-cpp"],
+  "tools": ["model.list", "model.activate"],
+  "permissions": ["PROCESS_EXECUTE", "MODEL_MANAGE"],
+  "runtime": "ANDROID_NATIVE",
+  "architectures": ["aarch64", "x86_64"],
+  "upstream": {
+    "name": "llama.cpp",
+    "license": "MIT",
+    "source": "https://github.com/ggml-org/llama.cpp"
+  }
+}

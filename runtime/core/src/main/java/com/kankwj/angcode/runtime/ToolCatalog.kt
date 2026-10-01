@@ -44,6 +44,8 @@ object ToolCatalog {
         ToolCapability("process.list", ToolFamily.PROCESS, "Listar procesos administrados", CapabilityStatus.BUILT_IN),
         ToolCapability("process.stop", ToolFamily.PROCESS, "Detener proceso administrado", CapabilityStatus.BUILT_IN),
         ToolCapability("runtime.executables", ToolFamily.PROCESS, "Detectar herramientas del runtime", CapabilityStatus.BUILT_IN),
+        ToolCapability("model.list", ToolFamily.CONNECTOR, "Listar modelos GGUF locales", CapabilityStatus.BUILT_IN),
+        ToolCapability("model.activate", ToolFamily.CONNECTOR, "Activar modelo local", CapabilityStatus.BUILT_IN),
         ToolCapability("tool.catalog", ToolFamily.CONNECTOR, "Consultar catálogo de capacidades", CapabilityStatus.BUILT_IN),
         ToolCapability("toolpack.list", ToolFamily.CONNECTOR, "Listar packs incluidos", CapabilityStatus.BUILT_IN),
         ToolCapability("toolpack.inspect", ToolFamily.CONNECTOR, "Inspeccionar requisitos de un pack", CapabilityStatus.BUILT_IN),

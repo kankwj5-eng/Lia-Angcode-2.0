@@ -66,7 +66,7 @@ object ToolCatalog {
 
         ToolCapability("sandbox.proot.*", ToolFamily.SANDBOX, "Linux PRoot por proyecto", CapabilityStatus.READY_TO_ADAPT, "termux/proot-distro"),
 
-        ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Descubrir y ejecutar herramientas MCP", CapabilityStatus.READY_TO_ADAPT, "modelcontextprotocol"),
+        ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Herramientas MCP dinámicas", CapabilityStatus.READY_TO_ADAPT, "modelcontextprotocol/kotlin-sdk"),
         ToolCapability("browser.lightpanda.*", ToolFamily.CONNECTOR, "Navegador headless por MCP/CDP", CapabilityStatus.READY_TO_ADAPT, "lightpanda-io/browser"),
         ToolCapability("ssh.*", ToolFamily.CONNECTOR, "Delegación a otra máquina", CapabilityStatus.PLANNED)
     )

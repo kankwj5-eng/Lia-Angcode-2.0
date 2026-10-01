@@ -1,55 +1,35 @@
 # MCP
 
-AngCode usa MCP como una capa de conectores, no como sustituto del Tool Broker.
+AngCode usa MCP como bus extensible de herramientas.
 
-## Flujo
+## Backends
 
-```text
-Modelo
-  -> Tool Broker
-  -> McpProxyTool
-  -> McpHttpClient
-  -> servidor MCP
-```
+### OfficialMcpHttpClient
 
-El cliente actual implementa:
+Backend principal basado en el SDK oficial Kotlin:
 
-- `initialize`;
-- notificación `notifications/initialized`;
-- `tools/list`;
-- `tools/call`;
-- captura y reutilización de `Mcp-Session-Id`;
-- cierre de sesión HTTP;
-- respuestas JSON y el caso simple de Streamable HTTP/SSE.
+- `io.modelcontextprotocol:kotlin-sdk-client:0.15.0`
+- transporte Streamable HTTP;
+- negociación/compatibilidad de protocolo gestionada por el SDK;
+- herramientas remotas convertidas dinámicamente a `AgentTool`.
 
-Los tools descubiertos se registran dinámicamente en `ToolBroker` mediante
-`connectMcpHttp()`.
+### LegacyMcpClientPort
+
+Adaptador para el cliente HTTP manual que ya existía en el proyecto. Se conserva para compatibilidad con servidores de la generación 2025 que dependan de sesión/handshake antiguo.
+
+## Permisos
+
+Las herramientas MCP requieren `MCP_EXTERNAL` además de `NETWORK`.
+
+Cuando el servidor vive en localhost/red privada, el caller debe añadir también `PRIVATE_NETWORK`.
 
 ## Lightpanda
 
-Cuando el proceso Lightpanda esté corriendo dentro del userland PRoot:
+Lightpanda puede exponerse como MCP local. Una vez que el binario esté disponible dentro de PRoot, AngCode podrá:
 
-```kotlin
-val client = McpHttpClient("http://127.0.0.1:9223/mcp")
-val info = broker.connectMcpHttp(client, namespace = "browser")
-```
+1. iniciar Lightpanda como proceso administrado;
+2. conectar `OfficialMcpHttpClient` a su endpoint;
+3. descubrir herramientas;
+4. registrarlas automáticamente con namespace `browser.*`.
 
-El Director verá entonces tools como:
-
-- `browser.goto`
-- `browser.markdown`
-- `browser.extract`
-- `browser.click`
-- `browser.fill`
-- `browser.screenshot`
-- `browser.session_new`
-
-Cada conexión conserva su `Mcp-Session-Id`. Una AgentCell puede usar una
-conexión distinta para tener página, cookies y memoria aisladas.
-
-## Seguridad
-
-El proxy exige `NETWORK` y `PRIVATE_NETWORK` por defecto porque un MCP
-local normalmente vive en localhost. La llamada sigue pasando por
-`ToolBroker`; conectar un servidor MCP no le da permisos automáticos al
-modelo.
+Esto mantiene el navegador agentico desacoplado del Director y del modelo.

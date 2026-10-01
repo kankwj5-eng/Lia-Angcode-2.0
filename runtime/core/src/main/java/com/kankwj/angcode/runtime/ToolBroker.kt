@@ -12,7 +12,8 @@ enum class ToolPermission {
     PRIVATE_NETWORK,
     ANDROID_BRIDGE,
     CLIPBOARD_READ,
-    CLIPBOARD_WRITE
+    CLIPBOARD_WRITE,
+    MCP_EXTERNAL
 }
 
 data class ToolContext(

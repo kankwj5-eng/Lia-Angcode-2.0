@@ -18,5 +18,7 @@ android {
 
 dependencies {
     implementation(project(":runtime-core"))
+    implementation("io.modelcontextprotocol:kotlin-sdk-client:0.15.0")
+    implementation("io.ktor:ktor-client-cio:3.5.1")
     testImplementation("junit:junit:4.13.2")
 }

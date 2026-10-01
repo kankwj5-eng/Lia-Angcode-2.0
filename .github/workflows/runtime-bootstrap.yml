@@ -1,6 +1,9 @@
 name: Build AngCode Runtime
 
 on:
+  push:
+    paths:
+      - ".github/runtime-build-trigger"
   workflow_dispatch:
     inputs:
       architecture:
@@ -31,6 +34,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
 
+    env:
+      ANGC_ARCH: ${{ github.event_name == 'workflow_dispatch' && inputs.architecture || 'aarch64' }}
+      ANGC_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'minimal' }}
+
     steps:
       - uses: actions/checkout@v5
 
@@ -39,8 +46,8 @@ jobs:
 
       - name: Build forked Termux bootstrap
         env:
-          ARCH: ${{ inputs.architecture }}
-          PROFILE: ${{ inputs.profile }}
+          ARCH: ${{ env.ANGC_ARCH }}
+          PROFILE: ${{ env.ANGC_PROFILE }}
           WORKDIR: ${{ github.workspace }}/.angcode-runtime-build
         run: ./scripts/build-angcode-bootstrap.sh
 
@@ -51,7 +58,7 @@ jobs:
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v4
         with:
-          name: angcode-runtime-${{ inputs.profile }}-${{ inputs.architecture }}
+          name: angcode-runtime-${{ env.ANGC_PROFILE }}-${{ env.ANGC_ARCH }}
           path: |
             .angcode-runtime-build/out/*.zip
             .angcode-runtime-build/out/*.sha256

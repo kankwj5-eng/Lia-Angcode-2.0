@@ -64,6 +64,7 @@ class ExecutableDiscovery(
             "apt-get" to listOf("apt-get"),
             "dpkg-query" to listOf("dpkg-query"),
             "proot" to listOf("proot"),
+            "proot-distro" to listOf("proot-distro", "pd"),
             "bash" to listOf("bash"),
             "make" to listOf("make"),
             "tar" to listOf("tar"),

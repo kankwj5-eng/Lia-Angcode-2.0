@@ -8,7 +8,8 @@ data class CommandRequest(
     val arguments: List<String> = emptyList(),
     val workingDirectory: File? = null,
     val stdin: String? = null,
-    val timeoutMillis: Long = 30_000
+    val timeoutMillis: Long = 30_000,
+    val environment: Map<String, String> = emptyMap()
 )
 
 data class CommandResult(
@@ -32,6 +33,9 @@ class CommandRunner {
         val process = ProcessBuilder(command)
             .apply {
                 request.workingDirectory?.let { directory(it) }
+                if (request.environment.isNotEmpty()) {
+                    environment().putAll(request.environment)
+                }
                 redirectErrorStream(false)
             }
             .start()

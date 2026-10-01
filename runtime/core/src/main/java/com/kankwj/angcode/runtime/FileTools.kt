@@ -115,6 +115,11 @@ fun ToolBroker.registerCoreTools(
     register(PackageListTool())
     register(PackageInstallTool())
 
+    register(SandboxListTool())
+    register(SandboxInstallTool())
+    register(SandboxExecTool())
+    register(SandboxRemoveTool())
+
     register(PythonRunTool())
     register(PythonTestTool())
     register(NodeRunTool())

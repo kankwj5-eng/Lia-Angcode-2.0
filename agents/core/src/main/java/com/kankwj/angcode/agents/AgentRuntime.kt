@@ -76,7 +76,9 @@ class ToolCallingAgentEngine(
 
         val memory = AgentRunMemory()
         memory.add(AgentMemoryKind.TASK, task)
-        val toolIds = broker.availableTools().map { it.id }
+        val toolIds = broker.availableTools().map { tool ->
+            tool.id + " — " + tool.description
+        }
         var lastText = ""
 
         for (step in 1..config.maxSteps) {

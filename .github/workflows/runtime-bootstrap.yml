@@ -1,0 +1,60 @@
+name: Build AngCode Runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: Target ABI
+        required: true
+        default: aarch64
+        type: choice
+        options:
+          - aarch64
+          - arm
+          - x86_64
+          - i686
+      profile:
+        description: Tool profile
+        required: true
+        default: minimal
+        type: choice
+        options:
+          - minimal
+          - dev
+          - full
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Prepare build script
+        run: chmod +x scripts/build-angcode-bootstrap.sh
+
+      - name: Build forked Termux bootstrap
+        env:
+          ARCH: ${{ inputs.architecture }}
+          PROFILE: ${{ inputs.profile }}
+          WORKDIR: ${{ github.workspace }}/.angcode-runtime-build
+        run: ./scripts/build-angcode-bootstrap.sh
+
+      - name: Verify output hashes
+        working-directory: .angcode-runtime-build/out
+        run: sha256sum -c *.sha256
+
+      - name: Upload runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: angcode-runtime-${{ inputs.profile }}-${{ inputs.architecture }}
+          path: |
+            .angcode-runtime-build/out/*.zip
+            .angcode-runtime-build/out/*.sha256
+            .angcode-runtime-build/out/runtime-manifest-*.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -194,6 +194,7 @@ private fun DashboardScreen() {
 
         missionAnalysis?.let { analysis ->
             item { MissionPlanPreview(analysis) }
+            item { MissionExecutionPanel(analysis) }
             item {
                 SectionTitle(
                     "Agentes propuestos",

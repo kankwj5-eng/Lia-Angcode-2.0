@@ -1,0 +1,35 @@
+{
+  "id": "core-dev",
+  "name": "Core Developer",
+  "version": "0.2.0",
+  "description": "Herramientas base para editar, buscar, ejecutar, versionar y empaquetar proyectos.",
+  "packages": ["git"],
+  "tools": [
+    "workspace.list",
+    "file.read",
+    "file.write",
+    "file.patch",
+    "file.delete",
+    "file.sha256",
+    "code.search",
+    "process.exec",
+    "process.start",
+    "process.logs",
+    "process.stop",
+    "git.status",
+    "git.diff",
+    "git.log",
+    "git.add",
+    "git.commit",
+    "http.get",
+    "artifact.zip",
+    "android.device_info"
+  ],
+  "permissions": [
+    "WORKSPACE_READ",
+    "WORKSPACE_WRITE",
+    "PROCESS_EXECUTE",
+    "NETWORK",
+    "ANDROID_BRIDGE"
+  ]
+}

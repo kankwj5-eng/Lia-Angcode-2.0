@@ -9,12 +9,14 @@ enum class ToolPermission {
     PROCESS_EXECUTE,
     UNRESTRICTED_SHELL,
     NETWORK,
+    PRIVATE_NETWORK,
     ANDROID_BRIDGE
 }
 
 data class ToolContext(
     val workspace: File,
-    val grantedPermissions: Set<ToolPermission>
+    val grantedPermissions: Set<ToolPermission>,
+    val executables: Map<String, String> = emptyMap()
 )
 
 data class ToolCall(

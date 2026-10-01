@@ -2,14 +2,6 @@ package com.kankwj.angcode.runtime
 
 import java.io.File
 
-private fun resolveWorkspacePath(workspace: File, relativePath: String): File {
-    require(!File(relativePath).isAbsolute) { "Solo se permiten rutas relativas al workspace" }
-    val root = workspace.canonicalFile
-    val target = File(root, relativePath).canonicalFile
-    require(target.toPath().startsWith(root.toPath())) { "La ruta intenta salir del workspace" }
-    return target
-}
-
 class WorkspaceListTool : AgentTool {
     override val id = "workspace.list"
     override val description = "Lista archivos y carpetas dentro del workspace."
@@ -17,7 +9,7 @@ class WorkspaceListTool : AgentTool {
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"].orEmpty()
-        val target = resolveWorkspacePath(context.workspace, path)
+        val target = safeWorkspaceFile(context.workspace, path)
         if (!target.exists()) return ToolResponse(false, "La ruta no existe: $path")
         if (!target.isDirectory) return ToolResponse(false, "La ruta no es una carpeta: $path")
 
@@ -39,9 +31,8 @@ class FileReadTool : AgentTool {
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
-        val target = resolveWorkspacePath(context.workspace, path)
+        val target = safeWorkspaceFile(context.workspace, path)
         if (!target.isFile) return ToolResponse(false, "Archivo no encontrado: $path")
-
         val maxBytes = call.arguments["maxBytes"]?.toIntOrNull()?.coerceIn(1, 1_000_000) ?: 200_000
         if (target.length() > maxBytes) {
             return ToolResponse(false, "Archivo demasiado grande para file.read (${target.length()} bytes)")
@@ -58,39 +49,53 @@ class FileWriteTool : AgentTool {
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
         val content = call.arguments["content"] ?: return ToolResponse(false, "Falta content")
-        val target = resolveWorkspacePath(context.workspace, path)
+        val target = safeWorkspaceFile(context.workspace, path)
         target.parentFile?.mkdirs()
         target.writeText(content)
-        return ToolResponse(
-            true,
-            "Escrito: $path",
-            mapOf("bytes" to target.length().toString())
-        )
+        return ToolResponse(true, "Escrito: $path", mapOf("bytes" to target.length().toString()))
+    }
+}
+
+class FileDeleteTool : AgentTool {
+    override val id = "file.delete"
+    override val description = "Elimina una ruta del workspace; para carpetas no vacías requiere recursive=true."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_WRITE)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
+        if (path.isBlank()) return ToolResponse(false, "No se puede eliminar la raíz del workspace")
+        val target = safeWorkspaceFile(context.workspace, path)
+        if (!target.exists()) return ToolResponse(false, "Ruta no encontrada")
+        val recursive = call.arguments["recursive"]?.toBooleanStrictOrNull() ?: false
+        val ok = if (target.isDirectory && recursive) target.deleteRecursively() else target.delete()
+        return if (ok) ToolResponse(true, "Eliminado: $path") else ToolResponse(false, "No se pudo eliminar")
     }
 }
 
 fun ToolBroker.registerCoreTools(
-    policy: ExecutionPolicy = ExecutionPolicy.androidBase()
+    policy: ExecutionPolicy = ExecutionPolicy.androidBase(),
+    processRegistry: ProcessRegistry = ProcessRegistry()
 ): ToolBroker = apply {
     register(SystemCommandTool(policy = policy))
+    register(ProcessStartTool(processRegistry, policy))
+    register(ProcessLogsTool(processRegistry))
+    register(ProcessStopTool(processRegistry))
+
     register(WorkspaceListTool())
     register(FileReadTool())
     register(FileWriteTool())
-    register(WorkspaceSearchTool())
+    register(FileDeleteTool())
     register(FilePatchTool())
+    register(CodeSearchTool())
     register(FileHashTool())
-    register(WorkspaceZipTool())
-    register(WorkspaceUnzipTool())
+    register(ArtifactZipTool())
+
+    register(GitStatusTool())
+    register(GitDiffTool())
+    register(GitLogTool())
+    register(GitAddTool())
+    register(GitCommitTool())
+
     register(HttpGetTool())
-
-    val processRegistry = ManagedProcessRegistry(policy = policy)
-    register(ProcessStartTool(processRegistry))
-    register(ProcessLogsTool(processRegistry))
-    register(ProcessListTool(processRegistry))
-    register(ProcessStopTool(processRegistry))
-
-    val checkpoints = CheckpointManager()
-    register(CheckpointCreateTool(checkpoints))
-    register(CheckpointListTool(checkpoints))
-    register(CheckpointRestoreTool(checkpoints))
+    register(DeviceInfoTool())
 }

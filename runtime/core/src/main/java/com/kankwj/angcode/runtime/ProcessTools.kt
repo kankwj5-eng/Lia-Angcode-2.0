@@ -1,189 +1,147 @@
 package com.kankwj.angcode.runtime
 
-import java.io.File
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.thread
 
 data class ManagedProcessSnapshot(
     val id: String,
-    val command: List<String>,
-    val startedAt: Instant,
-    val alive: Boolean,
+    val running: Boolean,
     val exitCode: Int?,
     val stdout: String,
     val stderr: String
 )
 
-private class CappedLog(private val maxChars: Int = 200_000) {
-    private val buffer = StringBuilder()
+class ProcessRegistry {
+    private data class Entry(
+        val process: Process,
+        val stdout: StringBuilder = StringBuilder(),
+        val stderr: StringBuilder = StringBuilder()
+    )
 
-    @Synchronized
-    fun append(text: String) {
-        buffer.append(text)
-        val overflow = buffer.length - maxChars
-        if (overflow > 0) buffer.delete(0, overflow)
-    }
+    private val entries = ConcurrentHashMap<String, Entry>()
 
-    @Synchronized
-    fun snapshot(): String = buffer.toString()
-}
-
-private data class ManagedProcess(
-    val id: String,
-    val command: List<String>,
-    val process: Process,
-    val startedAt: Instant,
-    val stdout: CappedLog,
-    val stderr: CappedLog
-)
-
-class ManagedProcessRegistry(
-    private val policy: ExecutionPolicy = ExecutionPolicy.androidBase()
-) {
-    private val processes = ConcurrentHashMap<String, ManagedProcess>()
-
-    fun start(
-        executable: String,
-        arguments: List<String>,
-        context: ToolContext
-    ): ToolResponse {
-        val decision = policy.check(executable, context, arguments)
-        if (!decision.allowed) return ToolResponse(false, decision.reason)
-
+    fun start(request: CommandRequest): String {
         val command = buildList {
-            add(executable)
-            addAll(arguments)
+            add(request.executable)
+            addAll(request.arguments)
         }
         val process = ProcessBuilder(command)
-            .directory(context.workspace)
-            .redirectErrorStream(false)
+            .apply { request.workingDirectory?.let { directory(it) } }
             .start()
-        process.outputStream.close()
 
-        val managed = ManagedProcess(
-            id = UUID.randomUUID().toString(),
-            command = command,
-            process = process,
-            startedAt = Instant.now(),
-            stdout = CappedLog(),
-            stderr = CappedLog()
-        )
-        processes[managed.id] = managed
+        if (request.stdin != null) {
+            process.outputStream.bufferedWriter().use { it.write(request.stdin) }
+        } else {
+            process.outputStream.close()
+        }
 
-        pump(managed.process.inputStream, managed.stdout)
-        pump(managed.process.errorStream, managed.stderr)
-
-        return ToolResponse(
-            true,
-            managed.id,
-            mapOf("pid" to runCatching { process.pid().toString() }.getOrDefault(""))
-        )
+        val id = UUID.randomUUID().toString()
+        val entry = Entry(process)
+        entries[id] = entry
+        collect(process.inputStream, entry.stdout)
+        collect(process.errorStream, entry.stderr)
+        return id
     }
 
     fun snapshot(id: String): ManagedProcessSnapshot? {
-        val managed = processes[id] ?: return null
-        val alive = managed.process.isAlive
-        val exit = if (alive) null else runCatching { managed.process.exitValue() }.getOrNull()
+        val entry = entries[id] ?: return null
+        val running = entry.process.isAlive
+        val exitCode = if (running) null else runCatching { entry.process.exitValue() }.getOrNull()
         return ManagedProcessSnapshot(
-            id = managed.id,
-            command = managed.command,
-            startedAt = managed.startedAt,
-            alive = alive,
-            exitCode = exit,
-            stdout = managed.stdout.snapshot(),
-            stderr = managed.stderr.snapshot()
+            id = id,
+            running = running,
+            exitCode = exitCode,
+            stdout = synchronized(entry.stdout) { entry.stdout.tail(80_000) },
+            stderr = synchronized(entry.stderr) { entry.stderr.tail(80_000) }
         )
     }
 
-    fun list(): List<ManagedProcessSnapshot> =
-        processes.keys.mapNotNull(::snapshot).sortedByDescending { it.startedAt }
-
-    fun stop(id: String, force: Boolean): Boolean {
-        val managed = processes[id] ?: return false
-        if (!managed.process.isAlive) return true
-        if (force) managed.process.destroyForcibly() else managed.process.destroy()
+    fun stop(id: String): Boolean {
+        val entry = entries[id] ?: return false
+        if (entry.process.isAlive) {
+            entry.process.destroy()
+            if (entry.process.isAlive) entry.process.destroyForcibly()
+        }
         return true
     }
 
-    private fun pump(input: java.io.InputStream, log: CappedLog) {
-        thread(name = "angcode-process-log", isDaemon = true) {
-            input.bufferedReader().useLines { lines ->
+    private fun collect(stream: java.io.InputStream, target: StringBuilder) {
+        Thread {
+            stream.bufferedReader().useLines { lines ->
                 lines.forEach { line ->
-                    log.append(line)
-                    log.append("\n")
+                    synchronized(target) {
+                        target.appendLine(line)
+                        if (target.length > 250_000) target.delete(0, target.length - 200_000)
+                    }
                 }
             }
+        }.apply {
+            isDaemon = true
+            start()
         }
     }
+
+    private fun StringBuilder.tail(maxChars: Int): String =
+        if (length <= maxChars) toString() else substring(length - maxChars)
 }
 
-class ProcessStartTool(private val registry: ManagedProcessRegistry) : AgentTool {
+class ProcessStartTool(
+    private val registry: ProcessRegistry,
+    private val policy: ExecutionPolicy
+) : AgentTool {
     override val id = "process.start"
-    override val description = "Inicia un proceso que puede seguir ejecutándose mientras otros agentes trabajan."
+    override val description = "Inicia un proceso largo y devuelve un processId."
     override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val executable = call.arguments["executable"] ?: return ToolResponse(false, "Falta executable")
         val args = call.arguments["args"]?.split('\u001F')?.filter { it.isNotEmpty() }.orEmpty()
-        return registry.start(executable, args, context)
-    }
-}
+        val decision = policy.check(executable, context, args)
+        if (!decision.allowed) return ToolResponse(false, decision.reason)
 
-class ProcessLogsTool(private val registry: ManagedProcessRegistry) : AgentTool {
-    override val id = "process.logs"
-    override val description = "Devuelve stdout/stderr acumulado y estado de un proceso."
-    override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
-
-    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val id = call.arguments["id"] ?: return ToolResponse(false, "Falta id")
-        val snapshot = registry.snapshot(id) ?: return ToolResponse(false, "Proceso no encontrado")
-        val output = buildString {
-            if (snapshot.stdout.isNotBlank()) append(snapshot.stdout)
-            if (snapshot.stderr.isNotBlank()) {
-                if (isNotEmpty()) append("\n--- stderr ---\n")
-                append(snapshot.stderr)
-            }
-        }
-        return ToolResponse(
-            true,
-            output,
-            mapOf(
-                "alive" to snapshot.alive.toString(),
-                "exitCode" to (snapshot.exitCode?.toString() ?: ""),
-                "command" to snapshot.command.joinToString(" ")
+        val id = registry.start(
+            CommandRequest(
+                executable = executable,
+                arguments = args,
+                workingDirectory = context.workspace,
+                stdin = call.arguments["stdin"]
             )
         )
+        return ToolResponse(true, id, mapOf("processId" to id))
     }
 }
 
-class ProcessListTool(private val registry: ManagedProcessRegistry) : AgentTool {
-    override val id = "process.list"
-    override val description = "Lista los procesos iniciados por AngCode."
+class ProcessLogsTool(private val registry: ProcessRegistry) : AgentTool {
+    override val id = "process.logs"
+    override val description = "Consulta salida y estado de un proceso iniciado por process.start."
     override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val entries = registry.list()
-        val output = entries.joinToString("\n") {
-            it.id + "\t" + (if (it.alive) "running" else "done") + "\t" + it.command.joinToString(" ")
-        }
-        return ToolResponse(true, output, mapOf("count" to entries.size.toString()))
+        val id = call.arguments["processId"] ?: return ToolResponse(false, "Falta processId")
+        val s = registry.snapshot(id) ?: return ToolResponse(false, "Proceso no encontrado")
+        val output = buildString {
+            appendLine("running=${s.running} exitCode=${s.exitCode ?: "-"}")
+            if (s.stdout.isNotBlank()) {
+                appendLine("--- stdout ---")
+                append(s.stdout)
+            }
+            if (s.stderr.isNotBlank()) {
+                appendLine("--- stderr ---")
+                append(s.stderr)
+            }
+        }.trimEnd()
+        return ToolResponse(true, output, mapOf("running" to s.running.toString()))
     }
 }
 
-class ProcessStopTool(private val registry: ManagedProcessRegistry) : AgentTool {
+class ProcessStopTool(private val registry: ProcessRegistry) : AgentTool {
     override val id = "process.stop"
-    override val description = "Detiene un proceso administrado por AngCode."
+    override val description = "Detiene un proceso iniciado por process.start."
     override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val id = call.arguments["id"] ?: return ToolResponse(false, "Falta id")
-        val force = call.arguments["force"]?.toBooleanStrictOrNull() ?: false
-        return if (registry.stop(id, force)) {
-            ToolResponse(true, "Solicitud de detención enviada")
-        } else {
-            ToolResponse(false, "Proceso no encontrado")
-        }
+        val id = call.arguments["processId"] ?: return ToolResponse(false, "Falta processId")
+        return if (registry.stop(id)) ToolResponse(true, "Proceso detenido: $id")
+        else ToolResponse(false, "Proceso no encontrado: $id")
     }
 }

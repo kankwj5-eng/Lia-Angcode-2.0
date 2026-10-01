@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "com.kankwj.angcode.runtime"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

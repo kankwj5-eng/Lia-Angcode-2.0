@@ -82,4 +82,15 @@ fun ToolBroker.registerCoreTools(
     register(WorkspaceZipTool())
     register(WorkspaceUnzipTool())
     register(HttpGetTool())
+
+    val processRegistry = ManagedProcessRegistry(policy = policy)
+    register(ProcessStartTool(processRegistry))
+    register(ProcessLogsTool(processRegistry))
+    register(ProcessListTool(processRegistry))
+    register(ProcessStopTool(processRegistry))
+
+    val checkpoints = CheckpointManager()
+    register(CheckpointCreateTool(checkpoints))
+    register(CheckpointListTool(checkpoints))
+    register(CheckpointRestoreTool(checkpoints))
 }

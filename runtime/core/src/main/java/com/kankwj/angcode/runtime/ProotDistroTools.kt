@@ -114,11 +114,11 @@ class SandboxExecTool : AgentTool {
 
         val command = mutableListOf(
             "login",
-            name,
             "--isolated",
             "--minimal",
             "--bind",
             context.workspace.canonicalPath + ":/workspace",
+            name,
             "--",
             executable
         )

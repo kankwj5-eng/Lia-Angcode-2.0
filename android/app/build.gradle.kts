@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "com.kankwj.angcode"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.kankwj.angcode"
         minSdk = 26
-        // Deliberate: the embedded Termux-style runtime needs executable files in app data.
-        // Android 10+ blocks that model for apps targeting API 29+.
+        // Deliberate: the embedded executable runtime needs writable app-data execution.
+        // Android 10+ blocks that Termux-style model for apps targeting API 29+.
         targetSdk = 28
         versionCode = 1
         versionName = "0.1.0-dev"
@@ -41,6 +41,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
+    implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")

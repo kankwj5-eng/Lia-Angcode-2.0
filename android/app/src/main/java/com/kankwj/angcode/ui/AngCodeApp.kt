@@ -390,9 +390,7 @@ private fun ToolsScreen() {
         icon = Icons.Rounded.Build
     ) {
         ToolExecutionCard()
-        InfoCard(Icons.Rounded.Terminal, "process.exec", "Runner estructurado con política de ejecución, timeout, stdout, stderr y código de salida.")
-        InfoCard(Icons.Rounded.Folder, "workspace.*", "Listar, leer y escribir archivos sin salir del workspace.")
-        InfoCard(Icons.Rounded.Public, "Browser", "Navegador visible integrado; la automatización agentica se monta encima de esta capa.")
+        ToolCatalogPanel()
     }
 }
 

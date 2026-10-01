@@ -20,7 +20,7 @@ class PackageListTool(
         val result = runner.run(
             CommandRequest(
                 executable = executable,
-                arguments = listOf("-W", "-f=${Package}\t${Version}\n"),
+                arguments = listOf("-W", "-f=" + 36.toChar() + "{Package}\\t" + 36.toChar() + "{Version}\\n"),
                 workingDirectory = context.workspace,
                 timeoutMillis = 30_000
             )

@@ -85,8 +85,21 @@ s = s.replace(old_bzip, 'PACKAGES+=("libbz2")', 1)
 p.write_text(s)
 PY
 
-# Validate fork identity and the compatibility patches before starting a long build.
-bash -lc '. scripts/properties.sh;   test "$TERMUX_APP__PACKAGE_NAME" = "'"$ANGCODE_APP_PACKAGE"'";   test "$TERMUX_APP__DATA_DIR" = "'"$ANGCODE_DATA_DIR"'";   case "$TERMUX_PREFIX" in "'"$ANGCODE_DATA_DIR"'"/*) ;; *) exit 23 ;; esac;   grep -q '''PACKAGES+=("libbz2")''' scripts/build-bootstraps.sh;   grep -q '''.built-packages-angcode''' scripts/build/termux_step_setup_variables.sh;   printf "package=%s\ndata=%s\nprefix=%s\n" "$TERMUX_APP__PACKAGE_NAME" "$TERMUX_APP__DATA_DIR" "$TERMUX_PREFIX"'
+# Validate fork identity and compatibility patches before starting a long build.
+(
+  # shellcheck disable=SC1091
+  . scripts/properties.sh
+  test "$TERMUX_APP__PACKAGE_NAME" = "$ANGCODE_APP_PACKAGE"
+  test "$TERMUX_APP__DATA_DIR" = "$ANGCODE_DATA_DIR"
+  case "$TERMUX_PREFIX" in
+    "$ANGCODE_DATA_DIR"/*) ;;
+    *) echo "Prefix inesperado: $TERMUX_PREFIX" >&2; exit 23 ;;
+  esac
+  printf "package=%s\ndata=%s\nprefix=%s\n" \
+    "$TERMUX_APP__PACKAGE_NAME" "$TERMUX_APP__DATA_DIR" "$TERMUX_PREFIX"
+)
+grep -Fq 'PACKAGES+=("libbz2")' scripts/build-bootstraps.sh
+grep -Fq '.built-packages-angcode' scripts/build/termux_step_setup_variables.sh
 
 # Clean only AngCode-specific state inside the builder. Never use bootstrap -f:
 # upstream -f can expand an unset arch marker path and become dangerously broad.

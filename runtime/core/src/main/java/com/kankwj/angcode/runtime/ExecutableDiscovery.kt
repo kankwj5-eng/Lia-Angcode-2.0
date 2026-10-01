@@ -68,7 +68,9 @@ class ExecutableDiscovery(
             "bash" to listOf("bash"),
             "make" to listOf("make"),
             "tar" to listOf("tar"),
-            "unzip" to listOf("unzip")
+            "unzip" to listOf("unzip"),
+            "llama-cli" to listOf("llama-cli"),
+            "llama-server" to listOf("llama-server")
         )
 
         fun forApp(context: Context): ExecutableDiscovery {

@@ -8,7 +8,6 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.StatFs
-import android.os.Build
 
 class AndroidBatteryTool(
     private val appContext: Context

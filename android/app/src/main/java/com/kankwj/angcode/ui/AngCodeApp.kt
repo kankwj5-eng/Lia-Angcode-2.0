@@ -152,7 +152,7 @@ private fun DashboardScreen() {
     val director = remember { DirectorEngine() }
     val plan = remember { director.bootstrapPlan() }
     val agents = remember { director.cellsFor(plan) }
-    val broker = remember { ToolBroker().apply { register(SystemCommandTool()) } }
+    val broker = remember { ToolBroker().registerCoreTools() }
     var health by remember { mutableStateOf<RuntimeHealth?>(null) }
 
     LaunchedEffect(Unit) {

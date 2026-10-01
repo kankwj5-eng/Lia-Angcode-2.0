@@ -361,8 +361,9 @@ private fun ProjectsScreen() {
             scope.launch {
                 importResult = withContext(Dispatchers.IO) {
                     WorkspaceManager(context).importTree(uri).also { result ->
-                        if (result.success && result.workspace != null) {
-                            ActiveProjectStore(context).setActive(result.workspace)
+                        val importedWorkspace = result.workspace
+                        if (result.success && importedWorkspace != null) {
+                            ActiveProjectStore(context).setActive(importedWorkspace)
                         }
                     }
                 }

@@ -421,6 +421,7 @@ private fun AgentsScreen() {
         subtitle = "Roles lógicos coordinados por un Director; no necesitamos cargar un LLM distinto por cada uno.",
         icon = Icons.Rounded.Memory
     ) {
+        MissionHistoryPanel()
         agents.forEach { AgentRow(it) }
     }
 }

@@ -125,4 +125,7 @@ fun ToolBroker.registerCoreTools(
     register(CmakeConfigureTool())
     register(NinjaBuildTool())
     register(AndroidGradleBuildTool())
+    register(MediaProbeTool())
+    register(MediaConvertTool())
+    register(ImageConvertTool())
 }

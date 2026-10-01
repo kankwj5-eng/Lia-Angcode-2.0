@@ -305,11 +305,20 @@ class AndroidGradleBuildTool : AgentTool {
         val wrapper = File(project, "gradlew")
         val extra = separatedArgs(call.arguments["args"])
 
-        return if (wrapper.isFile && wrapper.canExecute()) {
+        return if (wrapper.isFile) {
+            val executable: String
+            val arguments: List<String>
+            if (wrapper.canExecute()) {
+                executable = wrapper.absolutePath
+                arguments = listOf(task, "--no-daemon") + extra
+            } else {
+                executable = "/system/bin/sh"
+                arguments = listOf(wrapper.absolutePath, task, "--no-daemon") + extra
+            }
             val result = CommandRunner().run(
                 CommandRequest(
-                    executable = wrapper.absolutePath,
-                    arguments = listOf(task, "--no-daemon") + extra,
+                    executable = executable,
+                    arguments = arguments,
                     workingDirectory = project,
                     timeoutMillis = 20 * 60_000L
                 )

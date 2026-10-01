@@ -62,6 +62,7 @@ object AgentPermissionProfiles {
             AgentRole.BROWSER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.NETWORK,
+                ToolPermission.PRIVATE_NETWORK,
                 ToolPermission.MCP_EXTERNAL
             )
         }

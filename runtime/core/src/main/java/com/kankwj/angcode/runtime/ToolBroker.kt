@@ -16,7 +16,8 @@ enum class ToolPermission {
     MCP_EXTERNAL,
     PACKAGE_MANAGE,
     SANDBOX_MANAGE,
-    WORKTREE_MANAGE
+    WORKTREE_MANAGE,
+    MODEL_MANAGE
 }
 
 data class ToolContext(

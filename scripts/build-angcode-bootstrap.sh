@@ -60,7 +60,7 @@ PY
 # Validate that the derived paths are actually for AngCode.
 bash -lc '. scripts/properties.sh;   test "$TERMUX_APP__PACKAGE_NAME" = "'"$ANGCODE_APP_PACKAGE"'";   test "$TERMUX_APP__DATA_DIR" = "'"$ANGCODE_DATA_DIR"'";   case "$TERMUX_PREFIX" in "'"$ANGCODE_DATA_DIR"'"/*) ;; *) exit 23 ;; esac;   printf "package=%s\ndata=%s\nprefix=%s\n" "$TERMUX_APP__PACKAGE_NAME" "$TERMUX_APP__DATA_DIR" "$TERMUX_PREFIX"'
 
-./scripts/run-docker.sh ./scripts/build-bootstraps.sh   -f   --architectures "$ARCH"   --add "$EXTRA_PACKAGES"
+./scripts/run-docker.sh ./scripts/build-bootstraps.sh   --architectures "$ARCH"   --add "$EXTRA_PACKAGES"
 
 BOOTSTRAP="bootstrap-${ARCH}.zip"
 test -f "$BOOTSTRAP"

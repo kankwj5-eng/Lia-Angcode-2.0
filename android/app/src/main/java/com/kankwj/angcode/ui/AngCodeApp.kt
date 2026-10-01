@@ -431,7 +431,7 @@ private fun SettingsScreen() {
         icon = Icons.Rounded.Settings
     ) {
         RuntimeSetupCard()
-        InfoCard(Icons.Rounded.Memory, "Modelo local", "Gateway desacoplado: el runtime no dependerá de una familia de modelos concreta.")
+        ModelSetupCard()
         connectors.forEach { connector ->
             InfoCard(Icons.Rounded.Public, connector.name, connector.description)
         }

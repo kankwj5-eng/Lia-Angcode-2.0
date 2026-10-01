@@ -63,6 +63,34 @@ object ShizukuBridgeManager {
         )
     }
 
+    fun observe(
+        onPermissionResult: (granted: Boolean) -> Unit,
+        onBinderReceived: () -> Unit,
+        onBinderDead: () -> Unit
+    ): AutoCloseable {
+        val permissionListener =
+            Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+                onPermissionResult(grantResult == PackageManager.PERMISSION_GRANTED)
+            }
+        val receivedListener = Shizuku.OnBinderReceivedListener {
+            onBinderReceived()
+        }
+        val deadListener = Shizuku.OnBinderDeadListener {
+            service = null
+            onBinderDead()
+        }
+
+        Shizuku.addRequestPermissionResultListener(permissionListener)
+        Shizuku.addBinderReceivedListenerSticky(receivedListener)
+        Shizuku.addBinderDeadListener(deadListener)
+
+        return AutoCloseable {
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
+            Shizuku.removeBinderReceivedListener(receivedListener)
+            Shizuku.removeBinderDeadListener(deadListener)
+        }
+    }
+
     fun requestPermission(requestCode: Int = 8401): Boolean {
         if (!Shizuku.pingBinder()) return false
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) return true

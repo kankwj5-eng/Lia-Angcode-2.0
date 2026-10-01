@@ -139,9 +139,9 @@ class RuntimeBootstrapInstaller(
             )
             newPath.parentFile?.mkdirs()
 
-            if (newPath.exists() || runCatching { newPath.canonicalPath != newPath.absolutePath }.getOrDefault(false)) {
-                newPath.delete()
-            }
+            // File.delete() removes the symlink entry itself and is safe even
+            // when the link is dangling. It does not delete the symlink target.
+            newPath.delete()
             Os.symlink(oldPath, newPath.absolutePath)
             symlinkCount++
         }

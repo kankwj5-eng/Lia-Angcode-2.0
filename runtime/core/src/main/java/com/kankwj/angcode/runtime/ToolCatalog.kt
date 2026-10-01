@@ -86,7 +86,7 @@ object ToolCatalog {
         ToolCapability("android.shizuku.*", ToolFamily.ANDROID, "Backend privilegiado vía Shizuku", CapabilityStatus.OPTIONAL_BACKEND, "RikkaApps/Shizuku"),
         ToolCapability("android.root.*", ToolFamily.ANDROID, "Backend root opcional", CapabilityStatus.OPTIONAL_BACKEND, "topjohnwu/libsu"),
 
-        ToolCapability("sandbox.proot.*", ToolFamily.SANDBOX, "Linux PRoot por proyecto", CapabilityStatus.READY_TO_ADAPT, "termux/proot-distro"),
+        ToolCapability("sandbox.*", ToolFamily.SANDBOX, "Linux PRoot administrado por proyecto", CapabilityStatus.BUILT_IN, "termux/proot-distro"),
 
         ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Herramientas MCP dinámicas", CapabilityStatus.READY_TO_ADAPT, "modelcontextprotocol/kotlin-sdk"),
         ToolCapability("browser.lightpanda.*", ToolFamily.CONNECTOR, "Navegador headless por MCP/CDP", CapabilityStatus.READY_TO_ADAPT, "lightpanda-io/browser"),

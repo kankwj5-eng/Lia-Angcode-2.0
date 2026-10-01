@@ -72,7 +72,9 @@ import com.kankwj.angcode.agents.AgentCell
 import com.kankwj.angcode.agents.AgentRole
 import com.kankwj.angcode.agents.AgentStatus
 import com.kankwj.angcode.agents.DirectorEngine
+import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.connectors.ConnectorRegistry
+import com.kankwj.angcode.runtime.ActiveProjectStore
 import com.kankwj.angcode.runtime.ImportResult
 import com.kankwj.angcode.runtime.RuntimeHealth
 import com.kankwj.angcode.runtime.RuntimeProbe
@@ -152,10 +154,14 @@ fun AngCodeApp() {
 @Composable
 private fun DashboardScreen() {
     val director = remember { DirectorEngine() }
-    val plan = remember { director.bootstrapPlan() }
-    val agents = remember { director.cellsFor(plan) }
     val broker = remember { ToolBroker().registerCoreTools() }
     var health by remember { mutableStateOf<RuntimeHealth?>(null) }
+    var showMissionComposer by remember { mutableStateOf(false) }
+    var missionAnalysis by remember { mutableStateOf<MissionAnalysis?>(null) }
+
+    val agents = remember(missionAnalysis) {
+        missionAnalysis?.let { director.cellsFor(it.plan) }.orEmpty()
+    }
 
     LaunchedEffect(Unit) {
         health = withContext(Dispatchers.IO) { RuntimeProbe().inspect() }
@@ -167,11 +173,36 @@ private fun DashboardScreen() {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item { Header() }
-        item { HeroCard(health = health, toolCount = broker.availableTools().size) }
-        item { SectionTitle("Misión activa", "${plan.tasks.count { it.status == AgentStatus.DONE }}/${plan.tasks.size}") }
-        item { MissionCard() }
-        item { SectionTitle("Agentes", "${agents.count { it.status == AgentStatus.WORKING }} activos") }
-        items(agents.take(4)) { agent -> AgentRow(agent) }
+        item {
+            HeroCard(
+                health = health,
+                toolCount = broker.availableTools().size,
+                onNewMission = { showMissionComposer = true }
+            )
+        }
+
+        if (showMissionComposer || missionAnalysis != null) {
+            item {
+                MissionPlannerCard(
+                    onAnalysis = {
+                        missionAnalysis = it
+                        showMissionComposer = true
+                    }
+                )
+            }
+        }
+
+        missionAnalysis?.let { analysis ->
+            item { MissionPlanPreview(analysis) }
+            item {
+                SectionTitle(
+                    "Agentes propuestos",
+                    agents.size.toString()
+                )
+            }
+            items(agents) { agent -> AgentRow(agent) }
+        }
+
         item { RuntimeCard(health) }
         item { Spacer(Modifier.height(12.dp)) }
     }
@@ -203,7 +234,11 @@ private fun Header() {
 }
 
 @Composable
-private fun HeroCard(health: RuntimeHealth?, toolCount: Int) {
+private fun HeroCard(
+    health: RuntimeHealth?,
+    toolCount: Int,
+    onNewMission: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Panel),
         shape = RoundedCornerShape(24.dp),
@@ -235,7 +270,7 @@ private fun HeroCard(health: RuntimeHealth?, toolCount: Int) {
             )
 
             Button(
-                onClick = { },
+                onClick = onNewMission,
                 colors = ButtonDefaults.buttonColors(containerColor = AngOrange, contentColor = Color.Black),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -244,33 +279,6 @@ private fun HeroCard(health: RuntimeHealth?, toolCount: Int) {
                 Spacer(Modifier.width(8.dp))
                 Text("Nueva misión", fontWeight = FontWeight.Bold)
             }
-        }
-    }
-}
-
-@Composable
-private fun MissionCard() {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Graphite),
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF272930), RoundedCornerShape(20.dp))
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Code, null, tint = AngOrange)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Construir runtime inicial", color = InkWhite, fontWeight = FontWeight.SemiBold)
-                    Text("Arquitectura + UI + Tool Broker", color = Muted, fontSize = 12.sp)
-                }
-                Icon(Icons.Rounded.ArrowForward, null, tint = Muted)
-            }
-            LinearProgressIndicator(
-                progress = { .34f },
-                modifier = Modifier.fillMaxWidth().height(5.dp),
-                color = AngOrange,
-                trackColor = PanelRaised
-            )
         }
     }
 }
@@ -351,7 +359,13 @@ private fun ProjectsScreen() {
             }
             importing = true
             scope.launch {
-                importResult = withContext(Dispatchers.IO) { WorkspaceManager(context).importTree(uri) }
+                importResult = withContext(Dispatchers.IO) {
+                    WorkspaceManager(context).importTree(uri).also { result ->
+                        if (result.success && result.workspace != null) {
+                            ActiveProjectStore(context).setActive(result.workspace)
+                        }
+                    }
+                }
                 importing = false
             }
         }

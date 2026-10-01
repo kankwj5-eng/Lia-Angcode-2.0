@@ -14,6 +14,13 @@ class WorkspaceManager(private val context: Context) {
 
     fun rootDirectory(): File = root
 
+    fun listWorkspaces(includeSystem: Boolean = false): List<File> =
+        root.listFiles()
+            .orEmpty()
+            .filter { it.isDirectory }
+            .filter { includeSystem || !it.name.startsWith("_") }
+            .sortedByDescending { it.lastModified() }
+
     fun createWorkspace(name: String): File {
         val safe = sanitizeName(name)
         val dir = File(root, safe)

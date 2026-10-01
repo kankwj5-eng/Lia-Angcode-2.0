@@ -76,9 +76,9 @@ import com.kankwj.angcode.connectors.ConnectorRegistry
 import com.kankwj.angcode.runtime.ImportResult
 import com.kankwj.angcode.runtime.RuntimeHealth
 import com.kankwj.angcode.runtime.RuntimeProbe
-import com.kankwj.angcode.runtime.SystemCommandTool
 import com.kankwj.angcode.runtime.ToolBroker
 import com.kankwj.angcode.runtime.WorkspaceManager
+import com.kankwj.angcode.runtime.registerCoreTools
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.Graphite
 import com.kankwj.angcode.ui.theme.InkWhite
@@ -95,7 +95,8 @@ import kotlinx.coroutines.withContext
 enum class MainSection(val label: String, val icon: ImageVector) {
     HOME("Inicio", Icons.Rounded.Home),
     PROJECTS("Proyectos", Icons.Rounded.Folder),
-    TOOLS("Herramientas", Icons.Rounded.Build),
+    TOOLS("Tools", Icons.Rounded.Build),
+    BROWSER("Web", Icons.Rounded.Public),
     AGENTS("Agentes", Icons.Rounded.Memory),
     SETTINGS("Ajustes", Icons.Rounded.Settings)
 }
@@ -140,6 +141,7 @@ fun AngCodeApp() {
                 MainSection.HOME -> DashboardScreen()
                 MainSection.PROJECTS -> ProjectsScreen()
                 MainSection.TOOLS -> ToolsScreen()
+                MainSection.BROWSER -> BrowserScreen()
                 MainSection.AGENTS -> AgentsScreen()
                 MainSection.SETTINGS -> SettingsScreen()
             }
@@ -387,9 +389,10 @@ private fun ToolsScreen() {
         subtitle = "Capacidades registradas detrás del Tool Broker. Ningún agente ejecuta directamente fuera de él.",
         icon = Icons.Rounded.Build
     ) {
-        InfoCard(Icons.Rounded.Terminal, "process.exec", "Runner estructurado con timeout, stdout, stderr y código de salida.")
-        InfoCard(Icons.Rounded.Folder, "workspace", "Importación SAF, carpetas privadas, artifacts y estado por proyecto.")
-        InfoCard(Icons.Rounded.Public, "MCP / Browser", "Conectores preparados como módulos; integración completa es la siguiente capa.")
+        ToolExecutionCard()
+        InfoCard(Icons.Rounded.Terminal, "process.exec", "Runner estructurado con política de ejecución, timeout, stdout, stderr y código de salida.")
+        InfoCard(Icons.Rounded.Folder, "workspace.*", "Listar, leer y escribir archivos sin salir del workspace.")
+        InfoCard(Icons.Rounded.Public, "Browser", "Navegador visible integrado; la automatización agentica se monta encima de esta capa.")
     }
 }
 

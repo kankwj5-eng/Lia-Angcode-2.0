@@ -395,6 +395,7 @@ private fun ProjectsScreen() {
                 }
             )
         }
+        ArtifactShelf()
     }
 }
 

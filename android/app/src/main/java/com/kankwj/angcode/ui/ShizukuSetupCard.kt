@@ -1,6 +1,5 @@
 package com.kankwj.angcode.ui
 
-import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,9 +40,9 @@ import com.kankwj.angcode.ui.theme.Muted
 import com.kankwj.angcode.ui.theme.Panel
 import com.kankwj.angcode.ui.theme.Success
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rikka.shizuku.Shizuku
 
 @Composable
 fun ShizukuSetupCard() {
@@ -53,32 +52,10 @@ fun ShizukuSetupCard() {
     var connecting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    DisposableEffect(Unit) {
-        val permissionListener =
-            Shizuku.OnRequestPermissionResultListener { _, grantResult ->
-                message = if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                    "✓ Permiso Shizuku concedido"
-                } else {
-                    "Permiso Shizuku denegado"
-                }
-                refresh++
-            }
-        val receivedListener = Shizuku.OnBinderReceivedListener {
+    LaunchedEffect(Unit) {
+        while (true) {
             refresh++
-        }
-        val deadListener = Shizuku.OnBinderDeadListener {
-            message = "Shizuku se desconectó"
-            refresh++
-        }
-
-        Shizuku.addRequestPermissionResultListener(permissionListener)
-        Shizuku.addBinderReceivedListenerSticky(receivedListener)
-        Shizuku.addBinderDeadListener(deadListener)
-
-        onDispose {
-            Shizuku.removeRequestPermissionResultListener(permissionListener)
-            Shizuku.removeBinderReceivedListener(receivedListener)
-            Shizuku.removeBinderDeadListener(deadListener)
+            delay(1_000)
         }
     }
 

@@ -76,4 +76,10 @@ fun ToolBroker.registerCoreTools(
     register(WorkspaceListTool())
     register(FileReadTool())
     register(FileWriteTool())
+    register(WorkspaceSearchTool())
+    register(FilePatchTool())
+    register(FileHashTool())
+    register(WorkspaceZipTool())
+    register(WorkspaceUnzipTool())
+    register(HttpGetTool())
 }

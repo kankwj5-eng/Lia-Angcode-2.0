@@ -10,7 +10,23 @@
     "description": { "type": "string" },
     "packages": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "tools": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "permissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+    "permissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "runtime": { "type": "string", "enum": ["ANDROID_NATIVE", "PROOT"] },
+    "architectures": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "upstream": {
+      "type": "object",
+      "required": ["name", "license", "source"],
+      "properties": {
+        "name": { "type": "string" },
+        "license": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }

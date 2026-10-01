@@ -3,10 +3,10 @@ package com.kankwj.angcode.runtime
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.nio.file.Files
 
 class ExecutionPolicyTest {
-    private val workspace = createTempDirectory("angcode-policy-").toFile()
+    private val workspace = Files.createTempDirectory("angcode-policy-").toFile()
 
     @Test
     fun shellCommandStringRequiresExplicitPermission() {

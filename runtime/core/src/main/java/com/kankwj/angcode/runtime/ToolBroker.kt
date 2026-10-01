@@ -17,7 +17,8 @@ enum class ToolPermission {
     PACKAGE_MANAGE,
     SANDBOX_MANAGE,
     WORKTREE_MANAGE,
-    MODEL_MANAGE
+    MODEL_MANAGE,
+    SHIZUKU_PRIVILEGED
 }
 
 data class ToolContext(

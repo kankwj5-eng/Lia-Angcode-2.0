@@ -1,0 +1,61 @@
+# Android / Gradle
+.gradle/
+build/
+**/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin / Java
+out/
+*.class
+
+# Native
+*.o
+*.so
+*.a
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Runtime / generated
+workspace/
+workspaces/
+sandboxes/
+artifacts/
+logs/
+tmp/
+.cache/
+.env
+.env.*
+!.env.example
+
+# Models / large binaries
+*.gguf
+*.onnx
+*.bin
+*.apk
+*.aab
+*.zip
+*.tar
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db

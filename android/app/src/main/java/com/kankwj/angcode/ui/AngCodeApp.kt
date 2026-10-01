@@ -378,6 +378,8 @@ private fun ProjectsScreen() {
         subtitle = "Cada proyecto vive en su propio workspace y podrá crear celdas independientes.",
         icon = Icons.Rounded.Folder
     ) {
+        ProjectWorkspacePanel()
+
         ActionCard(
             icon = Icons.Rounded.Add,
             title = if (importing) "Importando…" else "Importar carpeta",
@@ -395,6 +397,7 @@ private fun ProjectsScreen() {
                 }
             )
         }
+        CheckpointPanel()
         ArtifactShelf()
     }
 }

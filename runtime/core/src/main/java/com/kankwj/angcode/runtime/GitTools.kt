@@ -214,3 +214,70 @@ class GitWorktreeRemoveTool : AgentTool {
         return runGit(context, args, 60_000L)
     }
 }
+
+
+class GitReviewTool : AgentTool {
+    override val id = "git.review"
+    override val description = "Muestra resumen y diff entre una rama de agente y una base."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val branch = call.arguments["branch"]?.takeIf(GitWorktreeNaming::validBranch)
+            ?: return ToolResponse(false, "branch faltante o inválida")
+        val base = call.arguments["base"]?.takeIf { it.isNotBlank() } ?: "HEAD"
+        if (base.length > 160 || base.any { it.isWhitespace() }) {
+            return ToolResponse(false, "base inválida")
+        }
+
+        val stat = runGit(
+            context,
+            listOf("diff", "--stat", base + "..." + branch),
+            60_000L
+        )
+        if (!stat.ok) return stat
+
+        val diff = runGit(
+            context,
+            listOf("diff", "--no-ext-diff", base + "..." + branch),
+            60_000L
+        )
+        if (!diff.ok) return diff
+
+        return ToolResponse(
+            true,
+            buildString {
+                appendLine("=== STAT ===")
+                appendLine(stat.output)
+                appendLine()
+                appendLine("=== DIFF ===")
+                append(diff.output)
+            }.trimEnd(),
+            mapOf("branch" to branch, "base" to base)
+        )
+    }
+}
+
+class GitMergeTool : AgentTool {
+    override val id = "git.merge"
+    override val description = "Fusiona una rama revisada en el workspace actual sin abrir editor."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_READ,
+        ToolPermission.WORKSPACE_WRITE,
+        ToolPermission.WORKTREE_MANAGE
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val branch = call.arguments["branch"]?.takeIf(GitWorktreeNaming::validBranch)
+            ?: return ToolResponse(false, "branch faltante o inválida")
+
+        val result = runGit(
+            context,
+            listOf("merge", "--no-ff", "--no-edit", branch),
+            5 * 60_000L
+        )
+
+        return result.copy(
+            metadata = result.metadata + mapOf("branch" to branch)
+        )
+    }
+}

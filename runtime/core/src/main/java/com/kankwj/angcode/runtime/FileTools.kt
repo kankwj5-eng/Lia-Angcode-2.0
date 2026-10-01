@@ -110,6 +110,8 @@ fun ToolBroker.registerCoreTools(
     register(GitWorktreeListTool())
     register(GitWorktreeCreateTool())
     register(GitWorktreeRemoveTool())
+    register(GitReviewTool())
+    register(GitMergeTool())
 
     register(HttpGetTool())
     register(DeviceInfoTool())

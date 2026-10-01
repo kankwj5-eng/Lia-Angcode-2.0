@@ -126,6 +126,7 @@ architecture=$ARCH
 profile=$PROFILE
 termux_packages_commit=$TERMUX_PACKAGES_COMMIT
 source=https://github.com/termux/termux-packages
+package_alias_curl=libcurl
 extra_packages=$EXTRA_PACKAGES
 built_markers=$ANGCODE_BUILT_MARKERS
 bootstrap_source_patch=bzip2-to-libbz2

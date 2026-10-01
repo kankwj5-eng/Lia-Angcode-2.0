@@ -18,13 +18,13 @@ esac
 
 case "$PROFILE" in
   minimal)
-    EXTRA_PACKAGES="proot,proot-distro,git,curl,openssh"
+    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh"
     ;;
   dev)
-    EXTRA_PACKAGES="proot,proot-distro,git,curl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq"
+    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq"
     ;;
   full)
-    EXTRA_PACKAGES="proot,proot-distro,git,curl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq,ffmpeg,imagemagick,tree-sitter"
+    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq,ffmpeg,imagemagick,tree-sitter"
     ;;
   *)
     echo "Perfil no soportado: $PROFILE" >&2

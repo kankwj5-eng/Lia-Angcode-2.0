@@ -1,0 +1,9 @@
+{
+  "id": "android-dev",
+  "name": "Android Developer",
+  "version": "0.1.0",
+  "description": "Herramientas de construcción e inspección para proyectos Android.",
+  "packages": ["git", "openjdk-17", "clang", "cmake", "ninja"],
+  "tools": ["git.status", "git.diff", "android.build", "android.logcat", "artifact.export"],
+  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE"]
+}

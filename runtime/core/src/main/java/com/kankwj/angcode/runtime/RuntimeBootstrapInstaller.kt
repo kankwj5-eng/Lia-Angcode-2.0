@@ -139,7 +139,9 @@ class RuntimeBootstrapInstaller(
             )
             newPath.parentFile?.mkdirs()
 
-            runCatching { Os.unlink(newPath.absolutePath) }
+            if (newPath.exists() || runCatching { newPath.canonicalPath != newPath.absolutePath }.getOrDefault(false)) {
+                newPath.delete()
+            }
             Os.symlink(oldPath, newPath.absolutePath)
             symlinkCount++
         }

@@ -26,7 +26,12 @@ class ProcessRegistry {
             addAll(request.arguments)
         }
         val process = ProcessBuilder(command)
-            .apply { request.workingDirectory?.let { directory(it) } }
+            .apply {
+                request.workingDirectory?.let { directory(it) }
+                if (request.environment.isNotEmpty()) {
+                    environment().putAll(request.environment)
+                }
+            }
             .start()
 
         if (request.stdin != null) {

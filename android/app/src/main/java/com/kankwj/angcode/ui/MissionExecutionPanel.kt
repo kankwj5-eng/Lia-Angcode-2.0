@@ -202,8 +202,20 @@ fun MissionExecutionPanel(
                             }
                         }
 
-                        runResult.onSuccess { result = it }
-                            .onFailure { error = it.message ?: "Falló la ejecución local" }
+                        runResult.onSuccess { completedRun ->
+                            result = completedRun
+                            runCatching {
+                                val workspace = projectStore.resolveActiveOrScratch()
+                                MissionHistoryStore().save(
+                                    workspace = workspace,
+                                    analysis = analysis,
+                                    result = completedRun,
+                                    modelName = model.name
+                                )
+                            }
+                        }.onFailure {
+                            error = it.message ?: "Falló la ejecución local"
+                        }
                         running = false
                     }
                 },

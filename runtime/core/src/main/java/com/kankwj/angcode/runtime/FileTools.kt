@@ -9,7 +9,7 @@ class WorkspaceListTool : AgentTool {
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"].orEmpty()
-        val target = safeWorkspaceFile(context.workspace, path)
+        val target = safePath(context.workspace, path)
         if (!target.exists()) return ToolResponse(false, "La ruta no existe: $path")
         if (!target.isDirectory) return ToolResponse(false, "La ruta no es una carpeta: $path")
 
@@ -31,8 +31,9 @@ class FileReadTool : AgentTool {
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
-        val target = safeWorkspaceFile(context.workspace, path)
+        val target = safePath(context.workspace, path)
         if (!target.isFile) return ToolResponse(false, "Archivo no encontrado: $path")
+
         val maxBytes = call.arguments["maxBytes"]?.toIntOrNull()?.coerceIn(1, 1_000_000) ?: 200_000
         if (target.length() > maxBytes) {
             return ToolResponse(false, "Archivo demasiado grande para file.read (${target.length()} bytes)")
@@ -49,7 +50,7 @@ class FileWriteTool : AgentTool {
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
         val content = call.arguments["content"] ?: return ToolResponse(false, "Falta content")
-        val target = safeWorkspaceFile(context.workspace, path)
+        val target = safePath(context.workspace, path)
         target.parentFile?.mkdirs()
         target.writeText(content)
         return ToolResponse(true, "Escrito: $path", mapOf("bytes" to target.length().toString()))
@@ -64,7 +65,7 @@ class FileDeleteTool : AgentTool {
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
         if (path.isBlank()) return ToolResponse(false, "No se puede eliminar la raíz del workspace")
-        val target = safeWorkspaceFile(context.workspace, path)
+        val target = safePath(context.workspace, path)
         if (!target.exists()) return ToolResponse(false, "Ruta no encontrada")
         val recursive = call.arguments["recursive"]?.toBooleanStrictOrNull() ?: false
         val ok = if (target.isDirectory && recursive) target.deleteRecursively() else target.delete()
@@ -74,21 +75,31 @@ class FileDeleteTool : AgentTool {
 
 fun ToolBroker.registerCoreTools(
     policy: ExecutionPolicy = ExecutionPolicy.androidBase(),
-    processRegistry: ProcessRegistry = ProcessRegistry()
+    processRegistry: ProcessRegistry = ProcessRegistry(),
+    checkpointManager: CheckpointManager = CheckpointManager()
 ): ToolBroker = apply {
     register(SystemCommandTool(policy = policy))
     register(ProcessStartTool(processRegistry, policy))
     register(ProcessLogsTool(processRegistry))
+    register(ProcessListTool(processRegistry))
     register(ProcessStopTool(processRegistry))
 
     register(WorkspaceListTool())
+    register(WorkspaceSearchTool())
+    register(CodeSearchTool())
     register(FileReadTool())
     register(FileWriteTool())
     register(FileDeleteTool())
     register(FilePatchTool())
-    register(CodeSearchTool())
     register(FileHashTool())
+
+    register(WorkspaceZipTool())
+    register(WorkspaceUnzipTool())
     register(ArtifactZipTool())
+
+    register(CheckpointCreateTool(checkpointManager))
+    register(CheckpointListTool(checkpointManager))
+    register(CheckpointRestoreTool(checkpointManager))
 
     register(GitStatusTool())
     register(GitDiffTool())

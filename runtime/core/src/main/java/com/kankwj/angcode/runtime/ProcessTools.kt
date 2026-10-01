@@ -56,6 +56,9 @@ class ProcessRegistry {
         )
     }
 
+    fun list(): List<ManagedProcessSnapshot> =
+        entries.keys.mapNotNull(::snapshot).sortedBy { it.id }
+
     fun stop(id: String): Boolean {
         val entry = entries[id] ?: return false
         if (entry.process.isAlive) {
@@ -131,6 +134,21 @@ class ProcessLogsTool(private val registry: ProcessRegistry) : AgentTool {
             }
         }.trimEnd()
         return ToolResponse(true, output, mapOf("running" to s.running.toString()))
+    }
+}
+
+class ProcessListTool(private val registry: ProcessRegistry) : AgentTool {
+    override val id = "process.list"
+    override val description = "Lista procesos iniciados por AngCode."
+    override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val items = registry.list()
+        return ToolResponse(
+            true,
+            items.joinToString("\n") { "${it.id}\trunning=${it.running}\texit=${it.exitCode ?: "-"}" },
+            mapOf("count" to items.size.toString())
+        )
     }
 }
 

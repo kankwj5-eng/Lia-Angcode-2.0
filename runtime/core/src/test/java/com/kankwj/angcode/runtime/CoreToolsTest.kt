@@ -22,7 +22,7 @@ class CoreToolsTest {
         )
 
         val patch = broker.execute(
-            ToolCall("file.patch", mapOf("path" to "src/test.txt", "old" to "beta", "new" to "delta")),
+            ToolCall("file.patch", mapOf("path" to "src/test.txt", "find" to "beta", "replace" to "delta")),
             context
         )
         assertTrue(patch.ok)
@@ -55,7 +55,7 @@ class CoreToolsTest {
     }
 
     @Test
-    fun zipCreatesArtifact() {
+    fun artifactZipCreatesOutput() {
         val root = workspace()
         root.resolve("hello.txt").writeText("hola")
         val broker = ToolBroker().registerCoreTools()

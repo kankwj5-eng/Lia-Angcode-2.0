@@ -1,110 +1,80 @@
 package com.kankwj.angcode.runtime
 
-import java.io.File
+private fun runGit(
+    context: ToolContext,
+    runner: CommandRunner,
+    arguments: List<String>
+): ToolResponse {
+    val executable = context.executables["git"]
+        ?: return ToolResponse(false, "Git aún no está instalado/registrado en este runtime")
 
-private class GitRunner(
-    private val executable: File,
-    private val runner: CommandRunner = CommandRunner()
-) {
-    init {
-        require(executable.isFile && executable.canExecute()) { "Git no está disponible: " + executable }
-    }
+    val result = runner.run(
+        CommandRequest(
+            executable = executable,
+            arguments = arguments,
+            workingDirectory = context.workspace,
+            timeoutMillis = 60_000
+        )
+    )
+    val output = listOf(result.stdout, result.stderr)
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
+        .trimEnd()
 
-    fun run(workspace: File, args: List<String>, timeoutMs: Long = 30_000): ToolResponse {
-        val result = runner.run(
-            CommandRequest(
-                executable = executable.absolutePath,
-                arguments = args,
-                workingDirectory = workspace,
-                timeoutMillis = timeoutMs
-            )
-        )
-        val output = buildString {
-            if (result.stdout.isNotBlank()) append(result.stdout.trimEnd())
-            if (result.stderr.isNotBlank()) {
-                if (isNotEmpty()) append("\n")
-                append(result.stderr.trimEnd())
-            }
-        }
-        return ToolResponse(
-            result.succeeded,
-            output,
-            mapOf(
-                "exitCode" to result.exitCode.toString(),
-                "durationMs" to result.durationMillis.toString()
-            )
-        )
-    }
+    return ToolResponse(
+        result.succeeded,
+        output,
+        mapOf("exitCode" to result.exitCode.toString(), "durationMs" to result.durationMillis.toString())
+    )
 }
 
-class GitStatusTool(private val git: GitRunner) : AgentTool {
+class GitStatusTool(private val runner: CommandRunner = CommandRunner()) : AgentTool {
     override val id = "git.status"
-    override val description = "Estado corto y rama del repositorio Git."
-    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
+    override val description = "Muestra el estado Git del workspace."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.PROCESS_EXECUTE)
     override fun invoke(call: ToolCall, context: ToolContext) =
-        git.run(context.workspace, listOf("status", "--short", "--branch"))
+        runGit(context, runner, listOf("status", "--short", "--branch"))
 }
 
-class GitDiffTool(private val git: GitRunner) : AgentTool {
+class GitDiffTool(private val runner: CommandRunner = CommandRunner()) : AgentTool {
     override val id = "git.diff"
-    override val description = "Diff del workspace, opcionalmente para una ruta."
-    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
-
+    override val description = "Muestra el diff Git del workspace."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.PROCESS_EXECUTE)
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val path = call.arguments["path"]
-        val args = mutableListOf("diff", "--no-ext-diff", "--")
-        if (!path.isNullOrBlank()) {
-            safePath(context.workspace, path)
-            args += path
-        }
-        return git.run(context.workspace, args)
+        val staged = call.arguments["staged"]?.toBooleanStrictOrNull() ?: false
+        return runGit(context, runner, if (staged) listOf("diff", "--cached", "--", ".") else listOf("diff", "--", "."))
     }
 }
 
-class GitLogTool(private val git: GitRunner) : AgentTool {
+class GitLogTool(private val runner: CommandRunner = CommandRunner()) : AgentTool {
     override val id = "git.log"
-    override val description = "Historial compacto del repositorio."
-    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
-
+    override val description = "Devuelve historial Git compacto."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.PROCESS_EXECUTE)
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val count = call.arguments["count"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
-        return git.run(
-            context.workspace,
-            listOf("log", "--oneline", "--decorate", "--max-count=" + count)
-        )
+        return runGit(context, runner, listOf("log", "--oneline", "--decorate", "-n", count.toString()))
     }
 }
 
-class GitAddTool(private val git: GitRunner) : AgentTool {
+class GitAddTool(private val runner: CommandRunner = CommandRunner()) : AgentTool {
     override val id = "git.add"
-    override val description = "Añade una ruta concreta al staging area."
-    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.WORKSPACE_WRITE)
-
+    override val description = "Añade rutas del workspace al staging de Git."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.WORKSPACE_WRITE, ToolPermission.PROCESS_EXECUTE)
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
-        safePath(context.workspace, path)
-        return git.run(context.workspace, listOf("add", "--", path))
+        val paths = call.arguments["paths"]?.split('\u001F')?.filter { it.isNotBlank() }.orEmpty()
+        if (paths.isEmpty()) return ToolResponse(false, "Falta paths")
+        paths.forEach { safePath(context.workspace, it) }
+        return runGit(context, runner, listOf("add", "--") + paths)
     }
 }
 
-class GitCommitTool(private val git: GitRunner) : AgentTool {
+class GitCommitTool(private val runner: CommandRunner = CommandRunner()) : AgentTool {
     override val id = "git.commit"
-    override val description = "Crea un commit con los cambios ya preparados."
-    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ, ToolPermission.WORKSPACE_WRITE)
-
+    override val description = "Crea un commit local con un mensaje explícito."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_WRITE, ToolPermission.PROCESS_EXECUTE)
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
-        val message = call.arguments["message"]?.trim()?.takeIf { it.isNotEmpty() }
-            ?: return ToolResponse(false, "Falta message")
-        if (message.length > 500) return ToolResponse(false, "Mensaje demasiado largo")
-        return git.run(context.workspace, listOf("commit", "-m", message), timeoutMs = 60_000)
+        val message = call.arguments["message"]?.trim().orEmpty()
+        if (message.isBlank()) return ToolResponse(false, "Falta message")
+        return runGit(context, runner, listOf("commit", "-m", message))
     }
-}
-
-fun ToolBroker.registerGitTools(gitExecutable: File): ToolBroker = apply {
-    val git = GitRunner(gitExecutable)
-    register(GitStatusTool(git))
-    register(GitDiffTool(git))
-    register(GitLogTool(git))
-    register(GitAddTool(git))
-    register(GitCommitTool(git))
 }

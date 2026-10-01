@@ -24,7 +24,10 @@ data class AgentCell(
     val role: AgentRole,
     val status: AgentStatus,
     val currentTask: String,
-    val progress: Float = 0f
+    val progress: Float = 0f,
+    val workspacePath: String? = null,
+    val branch: String? = null,
+    val sandbox: String? = null
 )
 
 data class MissionTask(

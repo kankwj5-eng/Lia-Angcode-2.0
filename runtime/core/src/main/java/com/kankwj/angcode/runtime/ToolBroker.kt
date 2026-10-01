@@ -15,7 +15,8 @@ enum class ToolPermission {
     CLIPBOARD_WRITE,
     MCP_EXTERNAL,
     PACKAGE_MANAGE,
-    SANDBOX_MANAGE
+    SANDBOX_MANAGE,
+    WORKTREE_MANAGE
 }
 
 data class ToolContext(

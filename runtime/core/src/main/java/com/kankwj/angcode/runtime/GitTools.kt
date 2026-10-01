@@ -100,3 +100,117 @@ class GitCommitTool : AgentTool {
         return runGit(context, listOf("commit", "-m", message), 60_000)
     }
 }
+
+
+object GitWorktreeNaming {
+    private val CELL_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+    private val BRANCH = Regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,120}$")
+
+    fun validCellName(value: String): Boolean = CELL_NAME.matches(value)
+
+    fun validBranch(value: String): Boolean =
+        BRANCH.matches(value) &&
+            !value.contains("..") &&
+            !value.contains("//") &&
+            !value.contains("@{") &&
+            !value.endsWith("/") &&
+            !value.endsWith(".lock")
+}
+
+private fun worktreeRoot(context: ToolContext): File {
+    val parent = context.workspace.canonicalFile.parentFile
+        ?: error("Workspace sin directorio padre")
+    val projectKey = context.workspace.name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+    return File(parent, ".angcode-worktrees/" + projectKey).apply { mkdirs() }
+}
+
+private fun worktreePath(context: ToolContext, name: String): File {
+    require(GitWorktreeNaming.validCellName(name)) { "Nombre de celda inválido" }
+    val root = worktreeRoot(context).canonicalFile
+    val target = File(root, name).canonicalFile
+    require(target.toPath().startsWith(root.toPath())) { "Ruta de worktree inválida" }
+    return target
+}
+
+class GitWorktreeListTool : AgentTool {
+    override val id = "git.worktree.list"
+    override val description = "Lista worktrees Git en formato porcelain."
+    override val requiredPermissions = setOf(ToolPermission.WORKSPACE_READ)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse =
+        runGit(context, listOf("worktree", "list", "--porcelain"))
+}
+
+class GitWorktreeCreateTool : AgentTool {
+    override val id = "git.worktree.create"
+    override val description = "Crea un worktree y rama aislados para una celda/agente."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_READ,
+        ToolPermission.WORKSPACE_WRITE,
+        ToolPermission.WORKTREE_MANAGE
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val name = call.arguments["name"]?.takeIf(GitWorktreeNaming::validCellName)
+            ?: return ToolResponse(false, "name faltante o inválido")
+
+        val branch = call.arguments["branch"]
+            ?: "angcode/" + name
+        if (!GitWorktreeNaming.validBranch(branch)) {
+            return ToolResponse(false, "branch inválida")
+        }
+
+        val base = call.arguments["base"]?.takeIf { it.isNotBlank() } ?: "HEAD"
+        if (base.length > 160 || base.any { it.isWhitespace() }) {
+            return ToolResponse(false, "base inválida")
+        }
+
+        val target = worktreePath(context, name)
+        if (target.exists()) {
+            return ToolResponse(false, "Ya existe un worktree para esa celda")
+        }
+        target.parentFile?.mkdirs()
+
+        val result = runGit(
+            context,
+            listOf("worktree", "add", "-b", branch, target.absolutePath, base),
+            2 * 60_000L
+        )
+
+        return if (result.ok) {
+            result.copy(
+                metadata = result.metadata + mapOf(
+                    "worktree" to target.absolutePath,
+                    "branch" to branch,
+                    "cell" to name
+                )
+            )
+        } else {
+            target.deleteRecursively()
+            result
+        }
+    }
+}
+
+class GitWorktreeRemoveTool : AgentTool {
+    override val id = "git.worktree.remove"
+    override val description = "Retira un worktree administrado de una celda."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_READ,
+        ToolPermission.WORKSPACE_WRITE,
+        ToolPermission.WORKTREE_MANAGE
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val name = call.arguments["name"]?.takeIf(GitWorktreeNaming::validCellName)
+            ?: return ToolResponse(false, "name faltante o inválido")
+        val target = worktreePath(context, name)
+        val force = call.arguments["force"]?.toBooleanStrictOrNull() ?: false
+
+        val args = mutableListOf("worktree", "remove")
+        if (force) args += "--force"
+        args += target.absolutePath
+
+        return runGit(context, args, 60_000L)
+    }
+}

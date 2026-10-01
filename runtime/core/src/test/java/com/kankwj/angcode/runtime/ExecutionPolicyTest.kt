@@ -6,7 +6,7 @@ import org.junit.Test
 import java.io.File
 
 class ExecutionPolicyTest {
-    private val workspace = createTempDir(prefix = "angcode-policy-")
+    private val workspace = createTempDirectory("angcode-policy-").toFile()
 
     @Test
     fun shellCommandStringRequiresExplicitPermission() {

@@ -72,6 +72,8 @@ fun BrowserScreen() {
                     )
                 }
 
+                BrowserAgentBackendCard()
+
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },

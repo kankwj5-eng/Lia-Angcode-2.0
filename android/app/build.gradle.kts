@@ -38,6 +38,7 @@ dependencies {
     implementation(project(":runtime-core"))
     implementation(project(":agent-core"))
     implementation(project(":connector-core"))
+    implementation("dev.rikka.shizuku:api:13.1.5")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)

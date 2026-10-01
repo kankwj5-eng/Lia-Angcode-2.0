@@ -87,6 +87,7 @@ fun ToolBroker.registerCoreTools(
     register(WorkspaceListTool())
     register(WorkspaceSearchTool())
     register(CodeSearchTool())
+    register(CodeSymbolsTool())
     register(FileReadTool())
     register(FileWriteTool())
     register(FileDeleteTool())

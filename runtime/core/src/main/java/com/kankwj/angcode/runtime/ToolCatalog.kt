@@ -46,6 +46,7 @@ object ToolCatalog {
         ToolCapability("checkpoint.create", ToolFamily.ARCHIVE, "Crear checkpoint del workspace", CapabilityStatus.BUILT_IN),
         ToolCapability("checkpoint.list", ToolFamily.ARCHIVE, "Listar checkpoints", CapabilityStatus.BUILT_IN),
         ToolCapability("checkpoint.restore", ToolFamily.ARCHIVE, "Restaurar checkpoint", CapabilityStatus.BUILT_IN),
+        ToolCapability("code.symbols", ToolFamily.CODE_INTELLIGENCE, "Outline ligero de símbolos", CapabilityStatus.BUILT_IN),
         ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git dentro del sandbox", CapabilityStatus.READY_TO_ADAPT, "git/git"),
         ToolCapability("code.ast.*", ToolFamily.CODE_INTELLIGENCE, "AST incremental", CapabilityStatus.READY_TO_ADAPT, "tree-sitter/tree-sitter"),
         ToolCapability("android.device_info", ToolFamily.ANDROID, "Información del dispositivo", CapabilityStatus.BUILT_IN),

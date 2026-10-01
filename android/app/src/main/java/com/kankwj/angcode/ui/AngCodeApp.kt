@@ -390,6 +390,7 @@ private fun ToolsScreen() {
         icon = Icons.Rounded.Build
     ) {
         ToolExecutionCard()
+        ToolPackPanel()
         ToolCatalogPanel()
     }
 }

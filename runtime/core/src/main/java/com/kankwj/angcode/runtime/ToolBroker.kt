@@ -7,6 +7,7 @@ enum class ToolPermission {
     WORKSPACE_READ,
     WORKSPACE_WRITE,
     PROCESS_EXECUTE,
+    UNRESTRICTED_SHELL,
     NETWORK,
     ANDROID_BRIDGE
 }
@@ -59,10 +60,11 @@ class ToolBroker {
 }
 
 class SystemCommandTool(
-    private val runner: CommandRunner = CommandRunner()
+    private val runner: CommandRunner = CommandRunner(),
+    private val policy: ExecutionPolicy = ExecutionPolicy.androidBase()
 ) : AgentTool {
     override val id: String = "process.exec"
-    override val description: String = "Ejecuta un binario con argumentos estructurados dentro del workspace."
+    override val description = "Ejecuta un binario permitido con argumentos estructurados dentro del workspace."
     override val requiredPermissions = setOf(ToolPermission.PROCESS_EXECUTE)
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
@@ -72,6 +74,11 @@ class SystemCommandTool(
             ?.split('\u001F')
             ?.filter { it.isNotEmpty() }
             .orEmpty()
+
+        val decision = policy.check(executable, context, args)
+        if (!decision.allowed) {
+            return ToolResponse(false, decision.reason, mapOf("policy" to "denied"))
+        }
 
         val result = runner.run(
             CommandRequest(
@@ -93,7 +100,8 @@ class SystemCommandTool(
             metadata = mapOf(
                 "exitCode" to result.exitCode.toString(),
                 "durationMs" to result.durationMillis.toString(),
-                "timedOut" to result.timedOut.toString()
+                "timedOut" to result.timedOut.toString(),
+                "policy" to "allowed"
             )
         )
     }

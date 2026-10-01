@@ -56,7 +56,15 @@ class ExecutableDiscovery(
             "sqlite3" to listOf("sqlite3"),
             "ffmpeg" to listOf("ffmpeg"),
             "ssh" to listOf("ssh"),
-            "curl" to listOf("curl")
+            "curl" to listOf("curl"),
+            "apt" to listOf("apt"),
+            "apt-get" to listOf("apt-get"),
+            "dpkg-query" to listOf("dpkg-query"),
+            "proot" to listOf("proot"),
+            "bash" to listOf("bash"),
+            "make" to listOf("make"),
+            "tar" to listOf("tar"),
+            "unzip" to listOf("unzip")
         )
 
         fun forApp(context: Context): ExecutableDiscovery {

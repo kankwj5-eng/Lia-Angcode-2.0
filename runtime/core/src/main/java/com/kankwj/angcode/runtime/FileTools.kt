@@ -110,4 +110,7 @@ fun ToolBroker.registerCoreTools(
 
     register(HttpGetTool())
     register(DeviceInfoTool())
+    register(RuntimeExecutablesTool())
+    register(PackageListTool())
+    register(PackageInstallTool())
 }

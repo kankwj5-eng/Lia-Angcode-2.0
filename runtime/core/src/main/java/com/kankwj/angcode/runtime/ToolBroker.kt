@@ -13,7 +13,8 @@ enum class ToolPermission {
     ANDROID_BRIDGE,
     CLIPBOARD_READ,
     CLIPBOARD_WRITE,
-    MCP_EXTERNAL
+    MCP_EXTERNAL,
+    PACKAGE_MANAGE
 }
 
 data class ToolContext(

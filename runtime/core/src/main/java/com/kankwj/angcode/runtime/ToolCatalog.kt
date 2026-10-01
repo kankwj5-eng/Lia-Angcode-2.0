@@ -43,6 +43,9 @@ object ToolCatalog {
         ToolCapability("process.logs", ToolFamily.PROCESS, "Leer logs de un proceso", CapabilityStatus.BUILT_IN),
         ToolCapability("process.list", ToolFamily.PROCESS, "Listar procesos administrados", CapabilityStatus.BUILT_IN),
         ToolCapability("process.stop", ToolFamily.PROCESS, "Detener proceso administrado", CapabilityStatus.BUILT_IN),
+        ToolCapability("runtime.executables", ToolFamily.PROCESS, "Detectar herramientas del runtime", CapabilityStatus.BUILT_IN),
+        ToolCapability("package.list", ToolFamily.SANDBOX, "Listar paquetes instalados", CapabilityStatus.BUILT_IN),
+        ToolCapability("package.install", ToolFamily.SANDBOX, "Instalar paquetes aprobados", CapabilityStatus.BUILT_IN),
 
         ToolCapability("http.get", ToolFamily.NETWORK, "HTTP(S) limitado por política", CapabilityStatus.BUILT_IN),
 

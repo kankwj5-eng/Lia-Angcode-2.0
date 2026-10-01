@@ -129,3 +129,80 @@ class CodeSymbolsTool : AgentTool {
         return null
     }
 }
+
+
+class CodeAstParseTool(
+    private val runner: CommandRunner = CommandRunner()
+) : AgentTool {
+    override val id = "code.ast.parse"
+    override val description = "Parsea un archivo con Tree-sitter cuando el runtime tiene CLI y gramática disponible."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_READ,
+        ToolPermission.PROCESS_EXECUTE
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val executable = context.executables["tree-sitter"]
+            ?: return ToolResponse(
+                false,
+                "Tree-sitter no está instalado; code.symbols sigue disponible como fallback",
+                mapOf("backend" to "unavailable")
+            )
+
+        val path = call.arguments["path"]
+            ?: return ToolResponse(false, "Falta path")
+        val target = safeWorkspaceFile(context.workspace, path)
+        if (!target.isFile) return ToolResponse(false, "Archivo no encontrado")
+        if (target.length() > 350_000) {
+            return ToolResponse(false, "Archivo demasiado grande para AST interactivo")
+        }
+
+        val args = mutableListOf("parse", "--no-ranges")
+
+        call.arguments["grammarPath"]?.takeIf { it.isNotBlank() }?.let { raw ->
+            val grammar = safeWorkspaceFile(context.workspace, raw)
+            if (!grammar.isDirectory) {
+                return ToolResponse(false, "grammarPath no es una carpeta")
+            }
+            args += listOf("--grammar-path", grammar.absolutePath)
+        }
+
+        call.arguments["scope"]?.takeIf { it.isNotBlank() }?.let { scope ->
+            if (!scope.matches(Regex("^[A-Za-z0-9._-]{1,100}$"))) {
+                return ToolResponse(false, "scope inválido")
+            }
+            args += listOf("--scope", scope)
+        }
+
+        args += target.absolutePath
+
+        val result = runner.run(
+            CommandRequest(
+                executable = executable,
+                arguments = args,
+                workingDirectory = context.workspace,
+                timeoutMillis = 45_000
+            )
+        )
+
+        val combined = buildString {
+            if (result.stdout.isNotBlank()) append(result.stdout)
+            if (result.stderr.isNotBlank()) {
+                if (isNotEmpty()) append("\n--- stderr ---\n")
+                append(result.stderr)
+            }
+        }
+
+        val maxChars = 600_000
+        return ToolResponse(
+            ok = result.succeeded,
+            output = if (combined.length <= maxChars) combined.trimEnd()
+            else combined.take(maxChars) + "\n…[AST truncado]",
+            metadata = mapOf(
+                "backend" to "tree-sitter",
+                "exitCode" to result.exitCode.toString(),
+                "truncated" to (combined.length > maxChars).toString()
+            )
+        )
+    }
+}

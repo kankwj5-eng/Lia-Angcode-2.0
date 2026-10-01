@@ -1,5 +1,12 @@
 package com.kankwj.angcode.ui
 
+import android.app.ActivityManager
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.Build
+import android.os.PowerManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,12 +38,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kankwj.angcode.agents.AgentMemoryKind
+import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
 import com.kankwj.angcode.agents.AgentRunConfig
-import com.kankwj.angcode.agents.AgentRunResult
 import com.kankwj.angcode.agents.LlamaCliModelGateway
 import com.kankwj.angcode.agents.MissionAnalysis
-import com.kankwj.angcode.agents.ToolCallingAgentEngine
+import com.kankwj.angcode.agents.MissionCoordinatorResult
+import com.kankwj.angcode.agents.MissionStateMachine
+import com.kankwj.angcode.agents.ResourceSnapshot
 import com.kankwj.angcode.runtime.ActiveProjectStore
 import com.kankwj.angcode.runtime.ExecutableDiscovery
 import com.kankwj.angcode.runtime.LocalModelStore
@@ -69,7 +77,7 @@ fun MissionExecutionPanel(
     val modelStore = remember { LocalModelStore(context) }
 
     var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<AgentRunResult?>(null) }
+    var result by remember { mutableStateOf<MissionCoordinatorResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
     val activeModel = modelStore.active()
@@ -154,18 +162,20 @@ fun MissionExecutionPanel(
                                     executable = File(llamaPath),
                                     model = File(model.path)
                                 )
-                                val engine = ToolCallingAgentEngine(
+                                val coordinator = AdaptiveMissionCoordinator(
                                     model = gateway,
                                     broker = broker
                                 )
+                                val session = MissionStateMachine().create(analysis)
 
-                                engine.run(
-                                    task = missionPrompt(analysis),
-                                    context = toolContext,
+                                coordinator.run(
+                                    initial = session,
+                                    rootContext = toolContext,
+                                    resources = readResourceSnapshot(context),
                                     config = AgentRunConfig(
-                                        maxSteps = 18,
+                                        maxSteps = 10,
                                         planningInterval = 4,
-                                        memoryWindowChars = 24_000
+                                        memoryWindowChars = 20_000
                                     )
                                 )
                             }
@@ -225,43 +235,54 @@ fun MissionExecutionPanel(
                             )
                             Spacer(Modifier.width(7.dp))
                             Text(
-                                if (run.completed) "Misión completada" else "Misión incompleta",
+                                if (run.completed) "Misión completada" else "Misión detenida/incompleta",
                                 color = InkWhite,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         Text(
-                            "Pasos de agente: " + run.stepsUsed,
+                            "Workers lógicos: " + run.taskResults.size +
+                                " · inferencia compartida: 1×",
                             color = Muted,
                             fontSize = 10.sp
                         )
 
-                        Text(
-                            run.answer,
-                            color = InkWhite,
-                            fontSize = 12.sp
-                        )
-
-                        val activity = run.memory
-                            .filter {
-                                it.kind == AgentMemoryKind.TOOL_CALL ||
-                                    it.kind == AgentMemoryKind.OBSERVATION ||
-                                    it.kind == AgentMemoryKind.ERROR
+                        run.taskResults.forEach { task ->
+                            Surface(
+                                color = PanelRaised,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(Modifier.padding(10.dp)) {
+                                    Text(
+                                        task.role.name + " · " +
+                                            if (task.completed) "OK" else "FALLO",
+                                        color = if (task.completed) Success else AngOrange,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                    Text(
+                                        task.answer.take(900),
+                                        color = InkWhite,
+                                        fontSize = 10.sp,
+                                        lineHeight = 14.sp
+                                    )
+                                    Text(
+                                        "pasos=" + task.stepsUsed,
+                                        color = Muted,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 9.sp
+                                    )
+                                }
                             }
-                            .takeLast(6)
+                        }
 
-                        if (activity.isNotEmpty()) {
+                        if (run.stalled) {
                             Text(
-                                activity.joinToString("\n") { item ->
-                                    "[" + item.kind.name + "] " +
-                                        (item.toolId?.let { it + " · " } ?: "") +
-                                        item.text.take(180)
-                                },
-                                color = Muted,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 9.sp,
-                                lineHeight = 13.sp
+                                "El plan quedó bloqueado por dependencias o una tarea fallida.",
+                                color = AngOrange,
+                                fontSize = 10.sp
                             )
                         }
                     }
@@ -271,26 +292,40 @@ fun MissionExecutionPanel(
     }
 }
 
-private fun missionPrompt(analysis: MissionAnalysis): String =
-    buildString {
-        appendLine("MISIÓN")
-        appendLine(analysis.mission)
-        appendLine()
-        appendLine("TIPO DE PROYECTO")
-        appendLine(analysis.project.kind.name)
-        appendLine()
-        appendLine("TOOL PACKS RECOMENDADOS")
-        appendLine(analysis.recommendedToolPacks.joinToString(", "))
-        appendLine()
-        appendLine("PLAN PROPUESTO")
-        analysis.plan.tasks.forEachIndexed { index, task ->
-            appendLine(
-                (index + 1).toString() + ". " +
-                    task.role.name + ": " + task.title
-            )
-        }
-        appendLine()
-        appendLine("Trabaja sobre el workspace actual. Inspecciona antes de editar. " +
-            "Usa herramientas estructuradas. Después de cambios, verifica con pruebas/build cuando corresponda. " +
-            "No declares éxito sin evidencia.")
+private fun readResourceSnapshot(context: Context): ResourceSnapshot {
+    val activity = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val memory = ActivityManager.MemoryInfo().also(activity::getMemoryInfo)
+
+    val battery = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+    val batteryPercent = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        .takeIf { it in 0..100 } ?: 50
+
+    val batteryIntent = context.registerReceiver(
+        null,
+        IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+    )
+    val status = batteryIntent?.getIntExtra(
+        BatteryManager.EXTRA_STATUS,
+        BatteryManager.BATTERY_STATUS_UNKNOWN
+    ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
+
+    val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+        status == BatteryManager.BATTERY_STATUS_FULL
+
+    val thermal = if (Build.VERSION.SDK_INT >= 29) {
+        val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        power.currentThermalStatus
+    } else {
+        0
     }
+
+    return ResourceSnapshot(
+        availableRamMb = (memory.availMem / (1024L * 1024L))
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+            .toInt(),
+        batteryPercent = batteryPercent,
+        charging = charging,
+        thermalLevel = thermal
+    )
+}
+

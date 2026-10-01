@@ -45,6 +45,8 @@ import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.agents.MissionStateMachine
 import com.kankwj.angcode.agents.ResourceSnapshot
+import com.kankwj.angcode.connectors.ConnectorSessionRegistry
+import com.kankwj.angcode.connectors.connectMcp
 import com.kankwj.angcode.runtime.ActiveProjectStore
 import com.kankwj.angcode.runtime.ExecutableDiscovery
 import com.kankwj.angcode.runtime.LocalModelStore
@@ -137,15 +139,34 @@ fun MissionExecutionPanel(
                                     .registerAndroidTools(context)
                                     .registerModelTools(context)
 
+                                val browserClient = ConnectorSessionRegistry.get("browser")
+                                if (browserClient != null) {
+                                    broker.connectMcp(
+                                        client = browserClient,
+                                        namespace = "browser",
+                                        permissions = setOf(
+                                            ToolPermission.NETWORK,
+                                            ToolPermission.PRIVATE_NETWORK,
+                                            ToolPermission.MCP_EXTERNAL
+                                        )
+                                    )
+                                }
+
+                                val permissions = mutableSetOf(
+                                    ToolPermission.WORKSPACE_READ,
+                                    ToolPermission.WORKSPACE_WRITE,
+                                    ToolPermission.PROCESS_EXECUTE,
+                                    ToolPermission.NETWORK,
+                                    ToolPermission.ANDROID_BRIDGE
+                                )
+                                if (browserClient != null) {
+                                    permissions += ToolPermission.PRIVATE_NETWORK
+                                    permissions += ToolPermission.MCP_EXTERNAL
+                                }
+
                                 val toolContext = ToolContext(
                                     workspace = workspace,
-                                    grantedPermissions = setOf(
-                                        ToolPermission.WORKSPACE_READ,
-                                        ToolPermission.WORKSPACE_WRITE,
-                                        ToolPermission.PROCESS_EXECUTE,
-                                        ToolPermission.NETWORK,
-                                        ToolPermission.ANDROID_BRIDGE
-                                    ),
+                                    grantedPermissions = permissions,
                                     executables = ExecutableDiscovery.forApp(context).asMap()
                                 )
 

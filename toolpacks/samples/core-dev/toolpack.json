@@ -3,7 +3,9 @@
   "name": "Core Developer",
   "version": "0.2.0",
   "description": "Herramientas base para editar, buscar, ejecutar, versionar y empaquetar proyectos.",
-  "packages": ["git"],
+  "packages": [
+    "git"
+  ],
   "tools": [
     "workspace.list",
     "file.read",
@@ -30,6 +32,7 @@
     "WORKSPACE_WRITE",
     "PROCESS_EXECUTE",
     "NETWORK",
-    "ANDROID_BRIDGE"
+    "ANDROID_BRIDGE",
+    "ARTIFACT_WRITE"
   ]
 }

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kankwj.angcode.agents.AgentCancellationToken
+import com.kankwj.angcode.agents.LlamaServerManager
 import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.ui.theme.AngOrange
@@ -150,6 +151,7 @@ fun MissionExecutionPanel(
                 Button(
                     onClick = {
                         cancellation?.cancel()
+                        LlamaServerManager.stop()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PanelRaised,
@@ -198,8 +200,11 @@ fun MissionExecutionPanel(
                             )
                             Spacer(Modifier.width(7.dp))
                             Text(
-                                if (run.completed) "Misión completada"
-                                else "Misión detenida/incompleta",
+                                when {
+                                    run.cancelled -> "Misión cancelada"
+                                    run.completed -> "Misión completada"
+                                    else -> "Misión detenida/incompleta"
+                                },
                                 color = InkWhite,
                                 fontWeight = FontWeight.Bold
                             )

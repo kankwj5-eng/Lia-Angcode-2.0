@@ -3,7 +3,20 @@
   "name": "Media Lab",
   "version": "0.1.0",
   "description": "Procesamiento local de audio, video e imágenes.",
-  "packages": ["ffmpeg", "imagemagick"],
-  "tools": ["media.probe", "media.convert", "image.convert", "artifact.zip"],
-  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE"]
+  "packages": [
+    "ffmpeg",
+    "imagemagick"
+  ],
+  "tools": [
+    "media.probe",
+    "media.convert",
+    "image.convert",
+    "artifact.zip"
+  ],
+  "permissions": [
+    "WORKSPACE_READ",
+    "WORKSPACE_WRITE",
+    "PROCESS_EXECUTE",
+    "ARTIFACT_WRITE"
+  ]
 }

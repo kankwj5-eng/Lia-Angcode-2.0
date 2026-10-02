@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +40,7 @@ import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.mission.BackgroundMissionSnapshot
 import com.kankwj.angcode.mission.BackgroundMissionState
 import com.kankwj.angcode.mission.MissionForegroundService
+import com.kankwj.angcode.runtime.ToolPermission
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.Graphite
 import com.kankwj.angcode.ui.theme.InkWhite
@@ -64,6 +66,12 @@ fun MissionExecutionPanel(
     var result by remember { mutableStateOf<MissionCoordinatorResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var readiness by remember { mutableStateOf(executor.readiness()) }
+    var approvedPermissions by remember(analysis.plan.id) {
+        mutableStateOf(emptySet<ToolPermission>())
+    }
+    val privilegeOptions = remember(analysis.plan.id, readiness) {
+        executor.privilegeOptions(analysis)
+    }
     var backgroundState by remember {
         mutableStateOf(BackgroundMissionState.snapshot())
     }
@@ -109,6 +117,61 @@ fun MissionExecutionPanel(
                 }
             }
 
+            Surface(
+                color = Graphite,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Text(
+                        "Permisos extra · solo esta misión",
+                        color = InkWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        "Apagados por defecto. No incluyen shell libre, instalación de paquetes ni gestión de contenedores.",
+                        color = Muted,
+                        fontSize = 9.sp,
+                        lineHeight = 12.sp
+                    )
+
+                    privilegeOptions.forEach { option ->
+                        val selected = option.permissions.all { it in approvedPermissions }
+                        Row {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    option.title,
+                                    color = if (option.available) InkWhite else Muted,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    if (option.available) option.detail else option.detail + " · no disponible",
+                                    color = Muted,
+                                    fontSize = 9.sp,
+                                    lineHeight = 12.sp
+                                )
+                            }
+                            Switch(
+                                checked = selected && option.available,
+                                enabled = option.available && !running,
+                                onCheckedChange = { checked ->
+                                    approvedPermissions = if (checked) {
+                                        approvedPermissions + option.permissions
+                                    } else {
+                                        approvedPermissions - option.permissions
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             Button(
                 enabled = readiness.ready && !running,
                 onClick = {
@@ -123,7 +186,8 @@ fun MissionExecutionPanel(
                             runCatching {
                                 executor.run(
                                     analysis = analysis,
-                                    cancellation = cancellationToken
+                                    cancellation = cancellationToken,
+                                    approvedPermissions = approvedPermissions
                                 )
                             }
                         }

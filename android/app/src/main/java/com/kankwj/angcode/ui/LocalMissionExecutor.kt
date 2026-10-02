@@ -44,6 +44,14 @@ data class LocalMissionReadiness(
     val detail: String
 )
 
+data class MissionPrivilegeOption(
+    val id: String,
+    val title: String,
+    val detail: String,
+    val permissions: Set<ToolPermission>,
+    val available: Boolean
+)
+
 data class LocalMissionOutcome(
     val result: MissionCoordinatorResult,
     val modelName: String,
@@ -68,10 +76,61 @@ class LocalMissionExecutor(
         return LocalMissionReadiness(true, model.name, "Listo · " + backend)
     }
 
+    fun privilegeOptions(analysis: MissionAnalysis): List<MissionPrivilegeOption> {
+        val executables = ExecutableDiscovery.forApp(appContext).asMap()
+        val advancedAndroid = MissionCapability.ANDROID_DEVICE in analysis.capabilities
+        val shizuku = ShizukuBridgeManager.status()
+
+        return listOf(
+            MissionPrivilegeOption(
+                id = "clipboard",
+                title = "Portapapeles",
+                detail = "Permite leer y escribir el portapapeles durante esta misión.",
+                permissions = setOf(
+                    ToolPermission.CLIPBOARD_READ,
+                    ToolPermission.CLIPBOARD_WRITE
+                ),
+                available = true
+            ),
+            MissionPrivilegeOption(
+                id = "android-ui",
+                title = "Acciones visibles Android",
+                detail = "Permite abrir apps, URLs y selectores visibles.",
+                permissions = setOf(ToolPermission.ANDROID_UI_ACTION),
+                available = advancedAndroid
+            ),
+            MissionPrivilegeOption(
+                id = "shizuku",
+                title = "Shizuku avanzado",
+                detail = "Permite logcat, inspección, captura e instalación APK mediante el servicio autorizado.",
+                permissions = setOf(ToolPermission.SHIZUKU_PRIVILEGED),
+                available = advancedAndroid && shizuku.serviceBound
+            ),
+            MissionPrivilegeOption(
+                id = "adb",
+                title = "ADB remoto",
+                detail = "Permite conectar/usar dispositivos ADB y red privada para ADB.",
+                permissions = setOf(
+                    ToolPermission.ADB_REMOTE,
+                    ToolPermission.PRIVATE_NETWORK
+                ),
+                available = "adb" in executables
+            ),
+            MissionPrivilegeOption(
+                id = "ssh",
+                title = "SSH remoto",
+                detail = "Permite delegar tareas a hosts con known_hosts verificado.",
+                permissions = setOf(ToolPermission.SSH_REMOTE),
+                available = "ssh" in executables
+            )
+        )
+    }
+
     fun run(
         analysis: MissionAnalysis,
         initialSession: MissionSession? = null,
-        cancellation: AgentCancellationToken = AgentCancellationToken()
+        cancellation: AgentCancellationToken = AgentCancellationToken(),
+        approvedPermissions: Set<ToolPermission> = emptySet()
     ): LocalMissionOutcome {
         val model = modelStore.active()
             ?: error("No hay modelo GGUF activo")
@@ -113,8 +172,21 @@ class LocalMissionExecutor(
 
         val wantsAdvancedAndroid =
             MissionCapability.ANDROID_DEVICE in analysis.capabilities
+        val allowedElevated = setOf(
+            ToolPermission.CLIPBOARD_READ,
+            ToolPermission.CLIPBOARD_WRITE,
+            ToolPermission.ANDROID_UI_ACTION,
+            ToolPermission.SHIZUKU_PRIVILEGED,
+            ToolPermission.ADB_REMOTE,
+            ToolPermission.SSH_REMOTE,
+            ToolPermission.PRIVATE_NETWORK
+        )
+        val approved = approvedPermissions.intersect(allowedElevated)
+
         val shizukuReady =
-            wantsAdvancedAndroid && ShizukuBridgeManager.status().serviceBound
+            wantsAdvancedAndroid &&
+                ToolPermission.SHIZUKU_PRIVILEGED in approved &&
+                ShizukuBridgeManager.status().serviceBound
 
         if (shizukuReady) {
             broker.registerShizukuTools()
@@ -138,6 +210,22 @@ class LocalMissionExecutor(
         }
         if (shizukuReady) {
             permissions += ToolPermission.SHIZUKU_PRIVILEGED
+        }
+        if (ToolPermission.CLIPBOARD_READ in approved) {
+            permissions += ToolPermission.CLIPBOARD_READ
+        }
+        if (ToolPermission.CLIPBOARD_WRITE in approved) {
+            permissions += ToolPermission.CLIPBOARD_WRITE
+        }
+        if (ToolPermission.ANDROID_UI_ACTION in approved && wantsAdvancedAndroid) {
+            permissions += ToolPermission.ANDROID_UI_ACTION
+        }
+        if (ToolPermission.ADB_REMOTE in approved && "adb" in executables) {
+            permissions += ToolPermission.ADB_REMOTE
+            permissions += ToolPermission.PRIVATE_NETWORK
+        }
+        if (ToolPermission.SSH_REMOTE in approved && "ssh" in executables) {
+            permissions += ToolPermission.SSH_REMOTE
         }
 
         val toolContext = ToolContext(

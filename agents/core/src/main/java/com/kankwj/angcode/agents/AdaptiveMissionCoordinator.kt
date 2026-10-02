@@ -41,10 +41,11 @@ data class MissionCoordinatorResult(
     val session: MissionSession,
     val taskResults: List<MissionTaskResult>,
     val stalled: Boolean,
-    val isolation: MissionIsolation = MissionIsolation(false)
+    val isolation: MissionIsolation = MissionIsolation(false),
+    val cancelled: Boolean = false
 ) {
     val completed: Boolean
-        get() = !stalled &&
+        get() = !cancelled && !stalled &&
             session.tasks.isNotEmpty() &&
             session.tasks.all { it.task.status == AgentStatus.DONE }
 }
@@ -87,7 +88,8 @@ class AdaptiveMissionCoordinator(
             maxSteps = 10,
             planningInterval = 4,
             memoryWindowChars = 18_000
-        )
+        ),
+        cancellation: AgentCancellationToken = AgentCancellationToken()
     ): MissionCoordinatorResult {
         var session = initial
         val results = mutableListOf<MissionTaskResult>()
@@ -99,7 +101,7 @@ class AdaptiveMissionCoordinator(
             rootContext.copy(workspace = File(path))
         } ?: rootContext
 
-        while (session.tasks.any {
+        while (!cancellation.isCancelled && session.tasks.any {
                 it.task.status == AgentStatus.QUEUED ||
                     it.task.status == AgentStatus.WORKING
             }
@@ -140,7 +142,8 @@ class AdaptiveMissionCoordinator(
                             rootContext
                         },
                         previous = snapshot,
-                        config = config
+                        config = config,
+                        cancellation = cancellation
                     )
                 }
             }
@@ -205,14 +208,16 @@ class AdaptiveMissionCoordinator(
             }
         }
 
+        val wasCancelled = cancellation.isCancelled
         val preliminary = MissionCoordinatorResult(
             session = session,
             taskResults = results,
             stalled = stalled,
-            isolation = isolation
+            isolation = isolation,
+            cancelled = wasCancelled
         )
 
-        if (preliminary.completed && isolation.enabled) {
+        if (!wasCancelled && preliminary.completed && isolation.enabled) {
             isolation = finalizeIsolation(
                 mission = initial.analysis,
                 rootContext = rootContext,
@@ -225,7 +230,8 @@ class AdaptiveMissionCoordinator(
             session = session,
             taskResults = results,
             stalled = stalled,
-            isolation = isolation
+            isolation = isolation,
+            cancelled = wasCancelled
         )
     }
 
@@ -394,7 +400,8 @@ class AdaptiveMissionCoordinator(
         mission: MissionAnalysis,
         rootContext: ToolContext,
         previous: MissionSession,
-        config: AgentRunConfig
+        config: AgentRunConfig,
+        cancellation: AgentCancellationToken
     ): MissionTaskResult {
         val permissions = AgentPermissionProfiles.constrainedTo(
             task.role,
@@ -445,7 +452,8 @@ class AdaptiveMissionCoordinator(
                 )
             },
             context = context,
-            config = config
+            config = config,
+            cancellation = cancellation
         )
 
         return MissionTaskResult(

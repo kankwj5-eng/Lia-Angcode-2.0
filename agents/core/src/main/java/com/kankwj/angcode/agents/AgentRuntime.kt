@@ -3,6 +3,7 @@ package com.kankwj.angcode.agents
 import com.kankwj.angcode.runtime.ToolBroker
 import com.kankwj.angcode.runtime.ToolCall
 import com.kankwj.angcode.runtime.ToolContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 enum class AgentMemoryKind {
     TASK, PLAN, MODEL, TOOL_CALL, OBSERVATION, ERROR, FINAL
@@ -39,6 +40,12 @@ class AgentRunMemory {
     }
 }
 
+class AgentCancellationToken {
+    private val cancelled = AtomicBoolean(false)
+    val isCancelled: Boolean get() = cancelled.get()
+    fun cancel(): Boolean = cancelled.compareAndSet(false, true)
+}
+
 data class AgentRunConfig(
     val maxSteps: Int = 12,
     val planningInterval: Int = 4,
@@ -49,7 +56,8 @@ data class AgentRunResult(
     val completed: Boolean,
     val answer: String,
     val stepsUsed: Int,
-    val memory: List<AgentMemoryStep>
+    val memory: List<AgentMemoryStep>,
+    val cancelled: Boolean = false
 )
 
 fun interface FinalAnswerValidator {
@@ -69,7 +77,8 @@ class ToolCallingAgentEngine(
     fun run(
         task: String,
         context: ToolContext,
-        config: AgentRunConfig = AgentRunConfig()
+        config: AgentRunConfig = AgentRunConfig(),
+        cancellation: AgentCancellationToken = AgentCancellationToken()
     ): AgentRunResult {
         require(config.maxSteps in 1..100)
         require(config.planningInterval >= 0)
@@ -82,6 +91,10 @@ class ToolCallingAgentEngine(
         var lastText = ""
 
         for (step in 1..config.maxSteps) {
+            if (cancellation.isCancelled) {
+                memory.add(AgentMemoryKind.ERROR, "Misión cancelada por el usuario.")
+                return AgentRunResult(false, "Misión cancelada.", step - 1, memory.snapshot(), true)
+            }
             if (
                 config.planningInterval > 0 &&
                 (step == 1 || (step - 1) % config.planningInterval == 0)
@@ -94,6 +107,10 @@ class ToolCallingAgentEngine(
                         maxOutputTokens = 384
                     )
                 )
+                if (cancellation.isCancelled) {
+                    memory.add(AgentMemoryKind.ERROR, "Misión cancelada durante planificación.")
+                    return AgentRunResult(false, "Misión cancelada.", step - 1, memory.snapshot(), true)
+                }
                 if (plan.text.isNotBlank()) {
                     memory.add(AgentMemoryKind.PLAN, plan.text.trim())
                     eventBus.publish(
@@ -115,6 +132,10 @@ class ToolCallingAgentEngine(
                 )
             )
 
+            if (cancellation.isCancelled) {
+                memory.add(AgentMemoryKind.ERROR, "Misión cancelada durante inferencia.")
+                return AgentRunResult(false, "Misión cancelada.", step - 1, memory.snapshot(), true)
+            }
             lastText = response.text.trim()
             if (lastText.isNotBlank()) memory.add(AgentMemoryKind.MODEL, lastText)
 
@@ -126,10 +147,18 @@ class ToolCallingAgentEngine(
                     toolId
                 )
 
+                if (cancellation.isCancelled) {
+                    memory.add(AgentMemoryKind.ERROR, "Misión cancelada antes de ejecutar herramienta.", toolId)
+                    return AgentRunResult(false, "Misión cancelada.", step - 1, memory.snapshot(), true)
+                }
                 val result = broker.execute(
                     ToolCall(toolId, response.toolArguments),
                     context
                 )
+                if (cancellation.isCancelled) {
+                    memory.add(AgentMemoryKind.ERROR, "Misión cancelada después de herramienta.", toolId)
+                    return AgentRunResult(false, "Misión cancelada.", step, memory.snapshot(), true)
+                }
                 memory.add(
                     if (result.ok) AgentMemoryKind.OBSERVATION else AgentMemoryKind.ERROR,
                     result.output,

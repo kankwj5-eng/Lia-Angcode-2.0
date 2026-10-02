@@ -52,6 +52,7 @@ fun MissionExecutionPanel(
     val executor = remember { LocalMissionExecutor(context) }
 
     var running by remember { mutableStateOf(false) }
+    var cancellation by remember { mutableStateOf<AgentCancellationToken?>(null) }
     var result by remember { mutableStateOf<MissionCoordinatorResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var readiness by remember { mutableStateOf(executor.readiness()) }
@@ -93,6 +94,8 @@ fun MissionExecutionPanel(
             Button(
                 enabled = readiness.ready && !running,
                 onClick = {
+                    val cancellationToken = AgentCancellationToken()
+                    cancellation = cancellationToken
                     running = true
                     result = null
                     error = null
@@ -117,6 +120,7 @@ fun MissionExecutionPanel(
                         }
 
                         readiness = executor.readiness()
+                        cancellation = null
                         running = false
                     }
                 },

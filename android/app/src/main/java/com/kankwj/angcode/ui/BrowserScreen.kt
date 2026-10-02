@@ -97,6 +97,8 @@ fun BrowserScreen() {
             }
         }
 
+        BrowserAgentControl()
+
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->

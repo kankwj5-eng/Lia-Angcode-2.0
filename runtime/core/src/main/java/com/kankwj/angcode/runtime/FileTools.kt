@@ -80,6 +80,8 @@ fun ToolBroker.registerCoreTools(
 ): ToolBroker = apply {
     register(SystemCommandTool(policy = policy))
     register(ProcessStartTool(processRegistry, policy))
+    register(ProcessWriteTool(processRegistry))
+    register(ProcessCloseInputTool(processRegistry))
     register(ProcessLogsTool(processRegistry))
     register(ProcessListTool(processRegistry))
     register(ProcessStopTool(processRegistry))

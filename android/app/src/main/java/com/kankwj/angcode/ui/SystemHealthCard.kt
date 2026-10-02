@@ -39,7 +39,7 @@ import com.kankwj.angcode.ui.theme.InkWhite
 import com.kankwj.angcode.ui.theme.Muted
 import com.kankwj.angcode.ui.theme.Panel
 import com.kankwj.angcode.ui.theme.Success
-import com.kankwj.angcode.ui.theme.Warning
+import com.kankwj.angcode.ui.theme.Warning as WarningColor
 
 private data class HealthItem(
     val label: String,
@@ -226,7 +226,7 @@ fun SystemHealthCard() {
                             tint = if (item.ready) {
                                 Success
                             } else if (item.required) {
-                                Warning
+                                WarningColor
                             } else {
                                 Muted
                             }

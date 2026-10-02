@@ -75,7 +75,7 @@ object RootBridgeManager {
     internal fun settingsGet(namespace: String, key: String): ToolResponse =
         run("settings get " + namespace + " " + key)
 
-    private fun run(command: String): ToolResponse {
+    internal fun run(command: String): ToolResponse {
         val shell = Shell.getCachedShell()
             ?: return ToolResponse(false, "Root no preparado; habilítalo en Ajustes")
         if (!shell.isRoot) {

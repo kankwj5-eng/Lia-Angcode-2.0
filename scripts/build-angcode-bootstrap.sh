@@ -21,10 +21,10 @@ case "$PROFILE" in
     EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh"
     ;;
   dev)
-    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq"
+    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq,llama-cpp"
     ;;
   full)
-    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq,ffmpeg,imagemagick,tree-sitter,openjdk-21,gradle,aapt,aapt2,d8,apksigner,android-tools,ecj"
+    EXTRA_PACKAGES="proot,proot-distro,git,libcurl,openssh,python,nodejs-lts,clang,cmake,ninja,make,sqlite,jq,llama-cpp,ffmpeg,imagemagick,tree-sitter,openjdk-21,gradle,aapt,aapt2,d8,apksigner,android-tools,ecj"
     ;;
   *)
     echo "Perfil no soportado: $PROFILE" >&2

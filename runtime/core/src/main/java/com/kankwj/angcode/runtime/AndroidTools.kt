@@ -15,6 +15,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.StatFs
+import java.io.File
 
 class AndroidBatteryTool(
     private val appContext: Context

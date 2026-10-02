@@ -36,7 +36,8 @@
     "PROCESS_EXECUTE",
     "NETWORK",
     "PRIVATE_NETWORK",
-    "ADB_REMOTE"
+    "ADB_REMOTE",
+    "ARTIFACT_WRITE"
   ],
   "runtime": "ANDROID_NATIVE",
   "architectures": [

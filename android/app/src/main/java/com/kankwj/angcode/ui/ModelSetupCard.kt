@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kankwj.angcode.agents.LlamaServerManager
 import com.kankwj.angcode.runtime.ExecutableDiscovery
 import com.kankwj.angcode.runtime.LocalModelStore
 import com.kankwj.angcode.runtime.ModelImportResult
@@ -59,7 +61,12 @@ fun ModelSetupCard() {
 
     val models = remember(refresh) { store.list() }
     val executables = remember(refresh) { ExecutableDiscovery.forApp(context).asMap() }
-    val llamaReady = "llama-cli" in executables
+    val serverReady = "llama-server" in executables
+    val cliReady = "llama-cli" in executables
+    val llamaReady = serverReady || cliReady
+    var serverRunning by remember(refresh) {
+        mutableStateOf(LlamaServerManager.status() != null)
+    }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -100,10 +107,30 @@ fun ModelSetupCard() {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (llamaReady) "llama-cli listo" else "Instala el pack Local LLM para inferencia",
+                        when {
+                            serverRunning -> "llama-server cargado y persistente"
+                            serverReady -> "llama-server listo · se cargará al ejecutar"
+                            cliReady -> "llama-cli listo · fallback por proceso"
+                            else -> "Instala el pack Local LLM para inferencia"
+                        },
                         color = if (llamaReady) Success else Muted,
                         fontSize = 11.sp
                     )
+                }
+            }
+
+            if (serverRunning) {
+                OutlinedButton(
+                    onClick = {
+                        LlamaServerManager.stop()
+                        serverRunning = false
+                        refresh++
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Rounded.Stop, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Detener modelo en memoria")
                 }
             }
 
@@ -199,7 +226,7 @@ fun ModelSetupCard() {
 
             if (!llamaReady) {
                 Text(
-                    "El modelo puede importarse ahora; la inferencia se habilitará cuando llama-cpp esté instalado en el runtime.",
+                    "El modelo puede importarse ahora; la inferencia se habilitará cuando llama-cpp esté instalado. AngCode preferirá llama-server persistente y usará llama-cli como fallback.",
                     color = Muted,
                     fontSize = 10.sp
                 )

@@ -17,6 +17,8 @@ import com.kankwj.angcode.agents.MissionSession
 import com.kankwj.angcode.agents.MissionStateMachine
 import com.kankwj.angcode.agents.ResourceSnapshot
 import com.kankwj.angcode.connectors.ConnectorSessionRegistry
+import com.kankwj.angcode.connectors.GitHubTokenStore
+import com.kankwj.angcode.connectors.registerGitHubTools
 import com.kankwj.angcode.connectors.connectMcp
 import com.kankwj.angcode.connectors.registerLightpandaTools
 import com.kankwj.angcode.connectors.shizuku.ShizukuBridgeManager
@@ -80,6 +82,14 @@ class LocalMissionExecutor(
             .registerModelTools(appContext)
             .registerLightpandaTools(appContext)
 
+        val githubReady =
+            MissionCapability.GITHUB_CONNECTOR in analysis.capabilities &&
+                GitHubTokenStore(appContext).hasToken()
+
+        if (githubReady) {
+            broker.registerGitHubTools(appContext)
+        }
+
         val browserClient = ConnectorSessionRegistry.get("browser")
         if (browserClient != null) {
             broker.connectMcp(
@@ -113,6 +123,9 @@ class LocalMissionExecutor(
         if (browserClient != null) {
             permissions += ToolPermission.PRIVATE_NETWORK
             permissions += ToolPermission.MCP_EXTERNAL
+        }
+        if (githubReady) {
+            permissions += ToolPermission.GITHUB_READ
         }
         if (shizukuReady) {
             permissions += ToolPermission.SHIZUKU_PRIVILEGED

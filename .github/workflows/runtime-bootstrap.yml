@@ -41,7 +41,7 @@ jobs:
 
     env:
       ANGC_ARCH: ${{ github.event_name == 'workflow_dispatch' && inputs.architecture || 'aarch64' }}
-      ANGC_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'minimal' }}
+      ANGC_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'dev' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -72,7 +72,7 @@ jobs:
           retention-days: 14
 
       - name: Publish verified runtime release
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

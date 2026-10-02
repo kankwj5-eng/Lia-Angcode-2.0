@@ -60,6 +60,7 @@ object AgentPermissionProfiles {
                 ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
                 ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ROOT_PRIVILEGED,
                 ToolPermission.ADB_REMOTE
             )
             AgentRole.BUILDER -> setOf(
@@ -68,6 +69,7 @@ object AgentPermissionProfiles {
                 ToolPermission.WORKSPACE_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
                 ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ROOT_PRIVILEGED,
                 ToolPermission.ADB_REMOTE,
                 ToolPermission.SSH_REMOTE
             )

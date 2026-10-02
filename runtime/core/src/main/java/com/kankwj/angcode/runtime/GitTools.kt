@@ -280,7 +280,11 @@ class GitMergeTool : AgentTool {
 
         val result = runGit(
             context,
-            listOf("merge", "--no-ff", "--no-edit", branch),
+            listOf(
+                "-c", "user.name=AngCode",
+                "-c", "user.email=angcode@localhost",
+                "merge", "--no-ff", "--no-edit", branch
+            ),
             5 * 60_000L
         )
 

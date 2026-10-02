@@ -53,11 +53,30 @@ class CommandRunner {
         stdoutThread.start()
         stderrThread.start()
 
-        val completed = process.waitFor(request.timeoutMillis, TimeUnit.MILLISECONDS)
-        if (!completed) process.destroyForcibly()
+        val completed = try {
+            process.waitFor(request.timeoutMillis, TimeUnit.MILLISECONDS)
+        } catch (interrupted: InterruptedException) {
+            process.destroyForcibly()
+            runCatching { process.waitFor(2, TimeUnit.SECONDS) }
+            stdoutThread.interrupt()
+            stderrThread.interrupt()
+            Thread.currentThread().interrupt()
+            throw interrupted
+        }
 
-        stdoutThread.join(2_000)
-        stderrThread.join(2_000)
+        if (!completed) {
+            process.destroyForcibly()
+            runCatching { process.waitFor(2, TimeUnit.SECONDS) }
+        }
+
+        try {
+            stdoutThread.join(2_000)
+            stderrThread.join(2_000)
+        } catch (interrupted: InterruptedException) {
+            process.destroyForcibly()
+            Thread.currentThread().interrupt()
+            throw interrupted
+        }
 
         return CommandResult(
             exitCode = if (completed) process.exitValue() else -1,

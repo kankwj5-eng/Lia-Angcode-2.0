@@ -439,6 +439,7 @@ private fun SettingsScreen() {
         icon = Icons.Rounded.Settings
     ) {
         SystemHealthCard()
+        AutomationPanel()
         RuntimeSetupCard()
         ModelSetupCard()
         GitHubSetupCard()

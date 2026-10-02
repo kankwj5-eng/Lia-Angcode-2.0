@@ -12,11 +12,17 @@ data class McpToolDefinition(
     val inputSchemaJson: String
 )
 
+data class McpBinaryContent(
+    val dataBase64: String,
+    val mimeType: String
+)
+
 data class McpCallResult(
     val text: String,
     val isError: Boolean,
     val imageCount: Int,
-    val rawJson: String
+    val rawJson: String,
+    val images: List<McpBinaryContent> = emptyList()
 )
 
 class McpProtocolException(message: String) : IllegalStateException(message)

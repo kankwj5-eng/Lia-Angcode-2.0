@@ -2,6 +2,7 @@ package com.kankwj.angcode.runtime
 
 import android.content.Context
 import android.system.Os
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
@@ -45,6 +46,7 @@ class RuntimeBootstrapInstaller(
             "angcode-bootstrap-" + UUID.randomUUID() + ".zip"
         )
 
+        val archiveBudget = ArchiveInstallBudget()
         val actual = stagedZip.outputStream().buffered().use { output ->
             val digest = MessageDigest.getInstance("SHA-256")
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -52,6 +54,7 @@ class RuntimeBootstrapInstaller(
                 while (true) {
                     val read = input.read(buffer)
                     if (read <= 0) break
+                    archiveBudget.onArchiveBytes(read.toLong())
                     output.write(buffer, 0, read)
                     digest.update(buffer, 0, read)
                 }
@@ -88,14 +91,23 @@ class RuntimeBootstrapInstaller(
 
         var filesExtracted = 0
         val symlinks = mutableListOf<Pair<String, String>>()
+        val seenEntries = HashSet<String>()
+        val extractionBudget = ArchiveInstallBudget()
 
         ZipInputStream(archive.inputStream().buffered()).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
                 val name = entry.name
+                extractionBudget.onEntry()
+                require(seenEntries.add(name)) {
+                    "Bootstrap rechazado: entrada ZIP duplicada"
+                }
 
                 if (name == "SYMLINKS.txt") {
-                    val text = zip.readBytes().toString(Charsets.UTF_8)
+                    val text = readEntryTextLimited(
+                        zip,
+                        ArchiveInstallBudget.MAX_SYMLINK_TABLE_BYTES
+                    )
                     text.lineSequence()
                         .map(String::trim)
                         .filter(String::isNotEmpty)
@@ -106,6 +118,7 @@ class RuntimeBootstrapInstaller(
                             }
                             val oldPath = line.substring(0, separator)
                             val newPath = line.substring(separator + 1)
+                            extractionBudget.onSymlink()
                             symlinks += oldPath to newPath
                         }
                     zip.closeEntry()
@@ -118,7 +131,13 @@ class RuntimeBootstrapInstaller(
                 } else {
                     target.parentFile?.mkdirs()
                     target.outputStream().buffered().use { output ->
-                        zip.copyTo(output)
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            val read = zip.read(buffer)
+                            if (read <= 0) break
+                            extractionBudget.onExtractedBytes(read.toLong())
+                            output.write(buffer, 0, read)
+                        }
                     }
                     applyExecutablePermissionIfNeeded(name, target)
                     filesExtracted++
@@ -213,6 +232,26 @@ class RuntimeBootstrapInstaller(
             "Entrada ZIP intenta salir del prefix"
         }
         return candidate
+    }
+
+    private fun readEntryTextLimited(
+        input: InputStream,
+        maxBytes: Int
+    ): String {
+        val output = ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+        val buffer = ByteArray(16 * 1024)
+        var total = 0
+
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            total += read
+            require(total <= maxBytes) {
+                "Bootstrap rechazado: SYMLINKS.txt demasiado grande"
+            }
+            output.write(buffer, 0, read)
+        }
+        return output.toString(Charsets.UTF_8.name())
     }
 
     private fun deleteSafely(file: File) {

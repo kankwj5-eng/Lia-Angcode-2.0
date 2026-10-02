@@ -141,8 +141,9 @@ object LlamaServerManager {
         registry.stop(handle.processId)
     }
 
-    fun logs(): ManagedProcessSnapshot? =
+    fun logs(): ManagedProcessSnapshot? = synchronized(lock) {
         current?.let { registry.snapshot(it.processId) }
+    }
 
     private fun freePort(): Int =
         ServerSocket(0).use { it.localPort }
@@ -225,9 +226,16 @@ class LlamaServerModelGateway(
             connection.readTimeout = timeoutMillis
             connection.requestMethod = "POST"
             connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty("Accept", "application/json")
+
+            val requestBytes = body.toString().toByteArray(Charsets.UTF_8)
+            if (requestBytes.size > MODEL_HTTP_MAX_REQUEST_BYTES) {
+                return ModelResponse(text = "Solicitud al modelo demasiado grande")
+            }
+            connection.setFixedLengthStreamingMode(requestBytes.size)
             connection.outputStream.use { output ->
-                output.write(body.toString().toByteArray(Charsets.UTF_8))
+                output.write(requestBytes)
             }
 
             val status = connection.responseCode
@@ -237,7 +245,10 @@ class LlamaServerModelGateway(
                 connection.errorStream
             }
 
-            val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val raw = readUtf8Bounded(
+                input = stream,
+                maxBytes = MODEL_HTTP_MAX_RESPONSE_BYTES
+            )
             if (status !in 200..299) {
                 return ModelResponse(
                     text = "llama-server HTTP " + status + ": " + raw.take(2000)

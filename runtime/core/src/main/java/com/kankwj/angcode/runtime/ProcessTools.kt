@@ -186,6 +186,17 @@ class ProcessStartTool(
             ?.toBooleanStrictOrNull()
             ?: false
 
+        if (
+            interactive &&
+            executable.substringAfterLast('/') in setOf("sh", "bash", "dash", "zsh") &&
+            ToolPermission.UNRESTRICTED_SHELL !in context.grantedPermissions
+        ) {
+            return ToolResponse(
+                false,
+                "Una shell interactiva requiere UNRESTRICTED_SHELL"
+            )
+        }
+
         val id = registry.start(
             CommandRequest(
                 executable = executable,
@@ -213,8 +224,10 @@ class ProcessWriteTool(
     override val id = "process.write"
     override val description =
         "Escribe stdin en un proceso interactivo iniciado por process.start."
-    override val requiredPermissions =
-        setOf(ToolPermission.PROCESS_EXECUTE)
+    override val requiredPermissions = setOf(
+        ToolPermission.PROCESS_EXECUTE,
+        ToolPermission.UNRESTRICTED_SHELL
+    )
 
     override fun invoke(
         call: ToolCall,

@@ -18,18 +18,19 @@ jobs:
 
       - name: Pack source snapshot
         run: |
-          tar             --exclude='.git'             --exclude='.gradle'             --exclude='*/build'             --exclude='*/build/*'             --exclude='angcode-source-snapshot.tar.gz'             -czf angcode-source-snapshot.tar.gz .
+          rm -f /tmp/angcode-source-snapshot.tar.gz
+          tar             --exclude='.git'             --exclude='.gradle'             --exclude='*/build'             --exclude='*/build/*'             -czf /tmp/angcode-source-snapshot.tar.gz .
 
       - name: Verify snapshot
         run: |
-          test -s angcode-source-snapshot.tar.gz
-          tar -tzf angcode-source-snapshot.tar.gz | head -50
-          sha256sum angcode-source-snapshot.tar.gz
+          test -s /tmp/angcode-source-snapshot.tar.gz
+          sha256sum /tmp/angcode-source-snapshot.tar.gz
+          tar -tzf /tmp/angcode-source-snapshot.tar.gz >/dev/null
 
       - name: Upload source snapshot
         uses: actions/upload-artifact@v4
         with:
           name: angcode-source-snapshot
-          path: angcode-source-snapshot.tar.gz
+          path: /tmp/angcode-source-snapshot.tar.gz
           retention-days: 1
           if-no-files-found: error

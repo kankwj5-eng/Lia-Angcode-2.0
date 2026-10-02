@@ -28,6 +28,8 @@ data class McpCallResult(
     val binaryContents: List<McpBinaryContent> = images
 )
 
+private const val MAX_RESPONSE_BYTES = 64 * 1024 * 1024
+
 class McpProtocolException(message: String) : IllegalStateException(message)
 
 /**

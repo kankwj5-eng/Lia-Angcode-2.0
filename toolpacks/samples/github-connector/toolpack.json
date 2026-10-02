@@ -1,0 +1,22 @@
+{
+  "id": "github-connector",
+  "name": "GitHub Connector",
+  "version": "0.1.0",
+  "description": "Acceso GitHub de solo lectura con token cifrado por Android Keystore.",
+  "packages": [],
+  "tools": [
+    "github.repo",
+    "github.issues",
+    "github.pulls",
+    "github.branches",
+    "github.actions"
+  ],
+  "permissions": ["NETWORK", "GITHUB_READ"],
+  "runtime": "ANDROID_NATIVE",
+  "architectures": [],
+  "upstream": {
+    "name": "GitHub REST API",
+    "license": "N/A",
+    "source": "https://docs.github.com/rest"
+  }
+}

@@ -72,7 +72,12 @@ fun BrowserScreen() {
                     )
                 }
 
-                BrowserAgentBackendCard()
+                BrowserAgentBackendCard(
+                    onTakeControl = { url ->
+                        address = url
+                        webViewRef?.loadUrl(url)
+                    }
+                )
 
                 OutlinedTextField(
                     value = address,
@@ -97,7 +102,6 @@ fun BrowserScreen() {
             }
         }
 
-        BrowserAgentControl()
         LocalPreviewCard(
             onOpen = { url ->
                 address = url

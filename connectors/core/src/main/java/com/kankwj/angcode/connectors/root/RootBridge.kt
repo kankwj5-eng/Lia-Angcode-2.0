@@ -66,6 +66,15 @@ object RootBridgeManager {
 
     fun ready(context: Context): Boolean = status(context).root
 
+    internal fun packageInfo(packageName: String): ToolResponse =
+        run("dumpsys package " + packageName)
+
+    internal fun logcat(lines: Int): ToolResponse =
+        run("logcat -d -t " + lines)
+
+    internal fun settingsGet(namespace: String, key: String): ToolResponse =
+        run("settings get " + namespace + " " + key)
+
     private fun run(command: String): ToolResponse {
         val shell = Shell.getCachedShell()
             ?: return ToolResponse(false, "Root no preparado; habilítalo en Ajustes")
@@ -124,7 +133,7 @@ class RootPackageInfoTool : AgentTool {
         val packageName = call.arguments["package"]
             ?.takeIf { ROOT_PACKAGE.matches(it) }
             ?: return ToolResponse(false, "package faltante o inválido")
-        return RootBridgeManager.run("dumpsys package " + packageName)
+        return RootBridgeManager.packageInfo(packageName)
     }
 }
 
@@ -135,7 +144,7 @@ class RootLogcatTool : AgentTool {
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val lines = call.arguments["lines"]?.toIntOrNull()?.coerceIn(20, 3000) ?: 300
-        return RootBridgeManager.run("logcat -d -t " + lines)
+        return RootBridgeManager.logcat(lines)
     }
 }
 
@@ -152,9 +161,7 @@ class RootSettingsGetTool : AgentTool {
             ?.takeIf { it.matches(Regex("^[A-Za-z0-9_.:-]{1,160}$")) }
             ?: return ToolResponse(false, "key inválida")
 
-        return RootBridgeManager.run(
-            "settings get " + namespace + " " + key
-        )
+        return RootBridgeManager.settingsGet(namespace, key)
     }
 }
 

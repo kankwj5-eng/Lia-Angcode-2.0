@@ -108,6 +108,7 @@ object ToolCatalog {
         ToolCapability("sandbox.*", ToolFamily.SANDBOX, "Linux PRoot administrado por proyecto", CapabilityStatus.BUILT_IN, "termux/proot-distro"),
 
         ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Herramientas MCP dinámicas", CapabilityStatus.BUILT_IN, "modelcontextprotocol/kotlin-sdk"),
+        ToolCapability("browser_runtime.*", ToolFamily.CONNECTOR, "Gestión del backend Lightpanda local", CapabilityStatus.BUILT_IN, "lightpanda-io/browser"),
         ToolCapability("browser.*", ToolFamily.CONNECTOR, "Navegador headless Lightpanda por MCP", CapabilityStatus.BUILT_IN, "lightpanda-io/browser"),
         ToolCapability("ssh.exec", ToolFamily.CONNECTOR, "Ejecutar comando remoto con host key estricta", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
         ToolCapability("ssh.upload", ToolFamily.CONNECTOR, "Subir archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),

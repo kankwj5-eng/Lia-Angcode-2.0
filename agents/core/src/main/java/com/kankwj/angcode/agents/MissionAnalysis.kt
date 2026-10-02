@@ -23,7 +23,8 @@ enum class MissionCapability {
     VERSION_CONTROL,
     MULTIMEDIA,
     ANDROID_DEVICE,
-    LINUX_SANDBOX
+    LINUX_SANDBOX,
+    GITHUB_CONNECTOR
 }
 
 data class ProjectProfile(
@@ -159,6 +160,12 @@ class MissionAnalyzer(
         ) capabilities += MissionCapability.VERSION_CONTROL
 
         if (containsAny(
+                "github", "pull request", "pull requests", "issue", "issues",
+                "workflow", "actions", "repositorio remoto"
+            )
+        ) capabilities += MissionCapability.GITHUB_CONNECTOR
+
+        if (containsAny(
                 "video", "audio", "imagen", "ffmpeg", "media"
             )
         ) capabilities += MissionCapability.MULTIMEDIA
@@ -178,6 +185,7 @@ class MissionAnalyzer(
         if (MissionCapability.MULTIMEDIA in capabilities) packs += "media"
         if (MissionCapability.BROWSER_AUTOMATION in capabilities) packs += "lightpanda-browser"
         if (MissionCapability.ANDROID_DEVICE in capabilities) packs += "android-dev"
+        if (MissionCapability.GITHUB_CONNECTOR in capabilities) packs += "github-connector"
         if (profile.kind == ProjectKind.PYTHON) packs += "python-data"
         if (profile.kind == ProjectKind.WEB_NODE) packs += "web-node"
         if (profile.kind == ProjectKind.NATIVE) packs += "native-dev"

@@ -35,4 +35,42 @@ class AgentPermissionProfilesTest {
         )
         assertTrue(ToolPermission.GITHUB_READ in researcherAllowed)
     }
+    @Test
+    fun githubWriteAndRootRequireParentApproval() {
+        val coderBase = setOf(
+            ToolPermission.WORKSPACE_READ,
+            ToolPermission.WORKSPACE_WRITE,
+            ToolPermission.PROCESS_EXECUTE,
+            ToolPermission.GITHUB_READ
+        )
+
+        assertFalse(
+            ToolPermission.GITHUB_WRITE in
+                AgentPermissionProfiles.constrainedTo(AgentRole.CODER, coderBase)
+        )
+        assertTrue(
+            ToolPermission.GITHUB_WRITE in
+                AgentPermissionProfiles.constrainedTo(
+                    AgentRole.CODER,
+                    coderBase + ToolPermission.GITHUB_WRITE
+                )
+        )
+
+        val builderBase = setOf(
+            ToolPermission.WORKSPACE_READ,
+            ToolPermission.WORKSPACE_WRITE,
+            ToolPermission.PROCESS_EXECUTE
+        )
+        assertFalse(
+            ToolPermission.ROOT_PRIVILEGED in
+                AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, builderBase)
+        )
+        assertTrue(
+            ToolPermission.ROOT_PRIVILEGED in
+                AgentPermissionProfiles.constrainedTo(
+                    AgentRole.BUILDER,
+                    builderBase + ToolPermission.ROOT_PRIVILEGED
+                )
+        )
+    }
 }

@@ -117,6 +117,8 @@ fun ToolBroker.registerCoreTools(
     register(GitMergeTool())
 
     register(HttpGetTool())
+    register(PreviewProbeTool())
+    register(PreviewScanTool())
     register(DeviceInfoTool())
     register(RuntimeExecutablesTool())
     register(ToolCatalogTool())

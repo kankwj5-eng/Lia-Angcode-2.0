@@ -56,6 +56,23 @@ class MissionStateMachine {
         return session.copy(tasks = updated)
     }
 
+    fun markCancelled(
+        session: MissionSession,
+        nowMillis: Long = System.currentTimeMillis()
+    ): MissionSession =
+        session.copy(
+            tasks = session.tasks.map { state ->
+                when (state.task.status) {
+                    AgentStatus.QUEUED, AgentStatus.WORKING -> state.copy(
+                        task = state.task.copy(status = AgentStatus.FAILED),
+                        finishedAtMillis = nowMillis,
+                        detail = "Misión cancelada por el usuario"
+                    )
+                    else -> state
+                }
+            }
+        )
+
     fun prepareForResume(session: MissionSession): MissionSession =
         session.copy(
             tasks = session.tasks.map { state ->

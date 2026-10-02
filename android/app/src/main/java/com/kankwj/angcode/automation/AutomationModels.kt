@@ -24,20 +24,25 @@ object AutomationRules {
     const val MAX_NAME_CHARS = 80
     const val MAX_MISSION_CHARS = 8_000
 
+    private val AUTOMATION_ID = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
     private val WORKSPACE_NAME = Regex("^[A-Za-z0-9._-]{1,80}$")
 
     fun newId(): String = UUID.randomUUID().toString()
 
     fun validate(definition: LocalAutomation): List<String> {
         val errors = mutableListOf<String>()
-        if (definition.id.isBlank() || definition.id.length > 80) errors += "id inválido"
+        if (!AUTOMATION_ID.matches(definition.id)) errors += "id inválido"
         if (definition.name.trim().length !in 1..MAX_NAME_CHARS) {
             errors += "name debe tener 1..$MAX_NAME_CHARS caracteres"
         }
         if (definition.mission.trim().length !in 1..MAX_MISSION_CHARS) {
             errors += "mission debe tener 1..$MAX_MISSION_CHARS caracteres"
         }
-        if (!WORKSPACE_NAME.matches(definition.workspaceName)) {
+        if (
+            !WORKSPACE_NAME.matches(definition.workspaceName) ||
+            definition.workspaceName == "." ||
+            definition.workspaceName == ".."
+        ) {
             errors += "workspaceName inválido"
         }
         if (definition.intervalMinutes !in MIN_INTERVAL_MINUTES..MAX_INTERVAL_MINUTES) {

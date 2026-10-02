@@ -56,6 +56,20 @@ class MissionStateMachine {
         return session.copy(tasks = updated)
     }
 
+    fun prepareForResume(session: MissionSession): MissionSession =
+        session.copy(
+            tasks = session.tasks.map { state ->
+                when (state.task.status) {
+                    AgentStatus.DONE -> state
+                    else -> state.copy(
+                        task = state.task.copy(status = AgentStatus.QUEUED),
+                        startedAtMillis = null,
+                        finishedAtMillis = null
+                    )
+                }
+            }
+        )
+
     fun nextRunnable(
         session: MissionSession,
         resources: ResourceSnapshot,

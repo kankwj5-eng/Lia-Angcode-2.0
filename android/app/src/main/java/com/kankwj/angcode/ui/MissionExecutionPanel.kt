@@ -1,12 +1,5 @@
 package com.kankwj.angcode.ui
 
-import android.app.ActivityManager
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.BatteryManager
-import android.os.Build
-import android.os.PowerManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,31 +30,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
-import com.kankwj.angcode.agents.AgentRunConfig
-import com.kankwj.angcode.agents.LlamaCliModelGateway
-import com.kankwj.angcode.agents.LlamaServerManager
-import com.kankwj.angcode.agents.LlamaServerModelGateway
 import com.kankwj.angcode.agents.MissionAnalysis
-import com.kankwj.angcode.agents.MissionCapability
 import com.kankwj.angcode.agents.MissionCoordinatorResult
-import com.kankwj.angcode.agents.MissionStateMachine
-import com.kankwj.angcode.agents.ResourceSnapshot
-import com.kankwj.angcode.connectors.ConnectorSessionRegistry
-import com.kankwj.angcode.connectors.shizuku.ShizukuBridgeManager
-import com.kankwj.angcode.connectors.shizuku.registerShizukuTools
-import com.kankwj.angcode.connectors.connectMcp
-import com.kankwj.angcode.connectors.registerLightpandaTools
-import com.kankwj.angcode.runtime.ActiveProjectStore
-import com.kankwj.angcode.runtime.ExecutableDiscovery
-import com.kankwj.angcode.runtime.LocalModelStore
-import com.kankwj.angcode.runtime.ToolBroker
-import com.kankwj.angcode.runtime.ToolCall
-import com.kankwj.angcode.runtime.ToolContext
-import com.kankwj.angcode.runtime.ToolPermission
-import com.kankwj.angcode.runtime.registerAndroidTools
-import com.kankwj.angcode.runtime.registerCoreTools
-import com.kankwj.angcode.runtime.registerModelTools
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.Graphite
 import com.kankwj.angcode.ui.theme.InkWhite
@@ -73,7 +42,6 @@ import com.kankwj.angcode.ui.theme.Success
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 @Composable
 fun MissionExecutionPanel(
@@ -81,18 +49,12 @@ fun MissionExecutionPanel(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val projectStore = remember { ActiveProjectStore(context) }
-    val modelStore = remember { LocalModelStore(context) }
+    val executor = remember { LocalMissionExecutor(context) }
 
     var running by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<MissionCoordinatorResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-
-    val activeModel = modelStore.active()
-    val executables = ExecutableDiscovery.forApp(context).asMap()
-    val llamaCli = executables["llama-cli"]
-    val llamaServer = executables["llama-server"]
-    val ready = activeModel != null && (llamaServer != null || llamaCli != null)
+    var readiness by remember { mutableStateOf(executor.readiness()) }
 
     Surface(
         color = Panel,
@@ -105,9 +67,9 @@ fun MissionExecutionPanel(
         ) {
             Row {
                 Icon(
-                    if (ready) Icons.Rounded.Bolt else Icons.Rounded.Warning,
+                    if (readiness.ready) Icons.Rounded.Bolt else Icons.Rounded.Warning,
                     null,
-                    tint = if (ready) AngOrange else Muted
+                    tint = if (readiness.ready) AngOrange else Muted
                 )
                 Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
@@ -118,13 +80,9 @@ fun MissionExecutionPanel(
                     )
                     Text(
                         when {
-                            activeModel == null -> "Selecciona un modelo GGUF en Ajustes"
-                            llamaServer == null && llamaCli == null ->
-                                "Instala el Tool Pack Local LLM"
-                            llamaServer != null ->
-                                activeModel.name + " · servidor persistente"
-                            else ->
-                                activeModel.name + " · fallback CLI"
+                            readiness.modelName == null -> readiness.detail
+                            readiness.ready -> readiness.modelName + " · " + readiness.detail
+                            else -> readiness.detail
                         },
                         color = Muted,
                         fontSize = 11.sp
@@ -133,134 +91,32 @@ fun MissionExecutionPanel(
             }
 
             Button(
-                enabled = ready && !running,
+                enabled = readiness.ready && !running,
                 onClick = {
-                    val model = activeModel ?: return@Button
-                    val cliPath = llamaCli
-                    val serverPath = llamaServer
-                    if (cliPath == null && serverPath == null) return@Button
                     running = true
                     result = null
                     error = null
 
                     scope.launch {
-                        val runResult = runCatching {
-                            withContext(Dispatchers.IO) {
-                                val workspace = projectStore.resolveActiveOrScratch()
-                                val broker = ToolBroker()
-                                    .registerCoreTools()
-                                    .registerAndroidTools(context)
-                                    .registerModelTools(context)
-                                    .registerLightpandaTools(context)
-
-                                val browserClient = ConnectorSessionRegistry.get("browser")
-                                if (browserClient != null) {
-                                    broker.connectMcp(
-                                        client = browserClient,
-                                        namespace = "browser",
-                                        permissions = setOf(
-                                            ToolPermission.NETWORK,
-                                            ToolPermission.PRIVATE_NETWORK,
-                                            ToolPermission.MCP_EXTERNAL
-                                        )
-                                    )
-                                }
-
-                                val wantsAdvancedAndroid =
-                                    MissionCapability.ANDROID_DEVICE in analysis.capabilities
-                                val shizukuReady =
-                                    wantsAdvancedAndroid &&
-                                        ShizukuBridgeManager.status().serviceBound
-
-                                if (shizukuReady) {
-                                    broker.registerShizukuTools()
-                                }
-
-                                val permissions = mutableSetOf(
-                                    ToolPermission.WORKSPACE_READ,
-                                    ToolPermission.WORKSPACE_WRITE,
-                                    ToolPermission.PROCESS_EXECUTE,
-                                    ToolPermission.NETWORK,
-                                    ToolPermission.ANDROID_BRIDGE,
-                                    ToolPermission.WORKTREE_MANAGE
-                                )
-                                if (browserClient != null) {
-                                    permissions += ToolPermission.PRIVATE_NETWORK
-                                    permissions += ToolPermission.MCP_EXTERNAL
-                                }
-                                if (shizukuReady) {
-                                    permissions += ToolPermission.SHIZUKU_PRIVILEGED
-                                }
-
-                                val toolContext = ToolContext(
-                                    workspace = workspace,
-                                    grantedPermissions = permissions,
-                                    executables = ExecutableDiscovery.forApp(context).asMap()
-                                )
-
-                                // Every run starts with a rollback point.
-                                broker.execute(
-                                    ToolCall(
-                                        "checkpoint.create",
-                                        mapOf("label" to "mission-start")
-                                    ),
-                                    toolContext
-                                )
-
-                                val gateway = if (serverPath != null) {
-                                    runCatching {
-                                        val handle = LlamaServerManager.ensureRunning(
-                                            executable = File(serverPath),
-                                            model = File(model.path)
-                                        )
-                                        LlamaServerModelGateway(handle)
-                                    }.getOrElse {
-                                        val fallback = cliPath
-                                            ?: throw it
-                                        LlamaCliModelGateway(
-                                            executable = File(fallback),
-                                            model = File(model.path)
-                                        )
-                                    }
-                                } else {
-                                    LlamaCliModelGateway(
-                                        executable = File(cliPath!!),
-                                        model = File(model.path)
-                                    )
-                                }
-                                val coordinator = AdaptiveMissionCoordinator(
-                                    model = gateway,
-                                    broker = broker
-                                )
-                                val session = MissionStateMachine().create(analysis)
-
-                                coordinator.run(
-                                    initial = session,
-                                    rootContext = toolContext,
-                                    resources = readResourceSnapshot(context),
-                                    config = AgentRunConfig(
-                                        maxSteps = 10,
-                                        planningInterval = 4,
-                                        memoryWindowChars = 20_000
-                                    )
-                                )
-                            }
+                        val runResult = withContext(Dispatchers.IO) {
+                            runCatching { executor.run(analysis) }
                         }
 
-                        runResult.onSuccess { completedRun ->
-                            result = completedRun
+                        runResult.onSuccess { outcome ->
+                            result = outcome.result
                             runCatching {
-                                val workspace = projectStore.resolveActiveOrScratch()
                                 MissionHistoryStore().save(
-                                    workspace = workspace,
+                                    workspace = outcome.workspace,
                                     analysis = analysis,
-                                    result = completedRun,
-                                    modelName = model.name
+                                    result = outcome.result,
+                                    modelName = outcome.modelName
                                 )
                             }
                         }.onFailure {
                             error = it.message ?: "Falló la ejecución local"
                         }
+
+                        readiness = executor.readiness()
                         running = false
                     }
                 },
@@ -279,9 +135,9 @@ fun MissionExecutionPanel(
                 )
             }
 
-            if (!ready) {
+            if (!readiness.ready) {
                 Text(
-                    "La misión ya puede planificarse sin modelo. La ejecución se activa cuando hay GGUF activo + llama-server/llama-cli.",
+                    "La planificación funciona sin modelo. La ejecución necesita un GGUF activo y llama-server/llama-cli.",
                     color = Muted,
                     fontSize = 10.sp
                 )
@@ -313,7 +169,8 @@ fun MissionExecutionPanel(
                             )
                             Spacer(Modifier.width(7.dp))
                             Text(
-                                if (run.completed) "Misión completada" else "Misión detenida/incompleta",
+                                if (run.completed) "Misión completada"
+                                else "Misión detenida/incompleta",
                                 color = InkWhite,
                                 fontWeight = FontWeight.Bold
                             )
@@ -369,41 +226,3 @@ fun MissionExecutionPanel(
         }
     }
 }
-
-private fun readResourceSnapshot(context: Context): ResourceSnapshot {
-    val activity = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    val memory = ActivityManager.MemoryInfo().also(activity::getMemoryInfo)
-
-    val battery = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-    val batteryPercent = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        .takeIf { it in 0..100 } ?: 50
-
-    val batteryIntent = context.registerReceiver(
-        null,
-        IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-    )
-    val status = batteryIntent?.getIntExtra(
-        BatteryManager.EXTRA_STATUS,
-        BatteryManager.BATTERY_STATUS_UNKNOWN
-    ) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
-
-    val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-        status == BatteryManager.BATTERY_STATUS_FULL
-
-    val thermal = if (Build.VERSION.SDK_INT >= 29) {
-        val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        power.currentThermalStatus
-    } else {
-        0
-    }
-
-    return ResourceSnapshot(
-        availableRamMb = (memory.availMem / (1024L * 1024L))
-            .coerceAtMost(Int.MAX_VALUE.toLong())
-            .toInt(),
-        batteryPercent = batteryPercent,
-        charging = charging,
-        thermalLevel = thermal
-    )
-}
-

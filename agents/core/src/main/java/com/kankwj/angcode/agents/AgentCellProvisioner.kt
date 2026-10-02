@@ -49,6 +49,7 @@ object AgentPermissionProfiles {
             )
             AgentRole.RESEARCHER -> setOf(
                 ToolPermission.WORKSPACE_READ,
+                ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.NETWORK,
                 ToolPermission.MCP_EXTERNAL,
                 ToolPermission.GITHUB_READ,
@@ -56,12 +57,14 @@ object AgentPermissionProfiles {
             )
             AgentRole.TESTER -> setOf(
                 ToolPermission.WORKSPACE_READ,
+                ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
                 ToolPermission.SHIZUKU_PRIVILEGED,
                 ToolPermission.ADB_REMOTE
             )
             AgentRole.BUILDER -> setOf(
                 ToolPermission.WORKSPACE_READ,
+                ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.WORKSPACE_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
                 ToolPermission.SHIZUKU_PRIVILEGED,
@@ -70,6 +73,7 @@ object AgentPermissionProfiles {
             )
             AgentRole.BROWSER -> setOf(
                 ToolPermission.WORKSPACE_READ,
+                ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.NETWORK,
                 ToolPermission.PRIVATE_NETWORK,
                 ToolPermission.MCP_EXTERNAL,

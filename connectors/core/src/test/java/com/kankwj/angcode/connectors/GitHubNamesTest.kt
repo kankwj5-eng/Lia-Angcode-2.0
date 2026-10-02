@@ -13,4 +13,14 @@ class GitHubNamesTest {
         assertFalse(GitHubNames.validOwner("bad-"))
         assertFalse(GitHubNames.validRepo("../secret"))
     }
+    @Test
+    fun validatesWriteRefsAndPaths() {
+        assertTrue(GitHubRefs.validBranch("angcode/feature-1"))
+        assertFalse(GitHubRefs.validBranch("bad//branch"))
+        assertFalse(GitHubRefs.validBranch("a/../main"))
+
+        assertTrue(GitHubPaths.validRepositoryPath("src/main/App.kt"))
+        assertFalse(GitHubPaths.validRepositoryPath("../secret"))
+        assertFalse(GitHubPaths.validRepositoryPath("/root/file"))
+    }
 }

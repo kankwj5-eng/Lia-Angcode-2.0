@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
@@ -50,9 +51,12 @@ import com.kankwj.angcode.ui.theme.Success
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 
 @Composable
-fun BrowserAgentBackendCard() {
+fun BrowserAgentBackendCard(
+    onTakeControl: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val binaryStore = remember { LightpandaBinaryStore(context) }
@@ -216,22 +220,75 @@ fun BrowserAgentBackendCard() {
                     )
                 }
             } else {
-                OutlinedButton(
-                    enabled = !busy,
-                    onClick = {
-                        busy = true
-                        scope.launch {
-                            withContext(Dispatchers.IO) { manager.stop() }
-                            message = "Navegador agente detenido"
-                            busy = false
-                            refresh++
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Rounded.Stop, null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Detener navegador agente", fontSize = 10.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = !busy,
+                        onClick = {
+                            busy = true
+                            message = null
+                            scope.launch {
+                                val handoff = withContext(Dispatchers.IO) {
+                                    val client = ConnectorSessionRegistry.get("browser")
+                                        ?: return@withContext BrowserHandoff(
+                                            null,
+                                            "Sesión MCP no disponible"
+                                        )
+                                    val result = client.callTool(
+                                        "session_list",
+                                        emptyMap()
+                                    )
+                                    if (result.isError) {
+                                        return@withContext BrowserHandoff(
+                                            null,
+                                            result.text.ifBlank {
+                                                "session_list falló"
+                                            }
+                                        )
+                                    }
+                                    parseCurrentBrowserUrl(result.text)
+                                }
+
+                                if (handoff.url != null) {
+                                    onTakeControl(handoff.url)
+                                    message =
+                                        "✓ URL abierta en navegador visible"
+                                } else {
+                                    message = "✕ " + handoff.detail
+                                }
+                                busy = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AngOrange,
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.OpenInBrowser, null)
+                        Spacer(Modifier.width(5.dp))
+                        Text("Abrir página", fontSize = 9.sp)
+                    }
+
+                    OutlinedButton(
+                        enabled = !busy,
+                        onClick = {
+                            busy = true
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    manager.stop()
+                                }
+                                message = "Navegador agente detenido"
+                                busy = false
+                                refresh++
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Stop, null)
+                        Spacer(Modifier.width(5.dp))
+                        Text("Detener", fontSize = 9.sp)
+                    }
                 }
             }
 
@@ -250,5 +307,48 @@ fun BrowserAgentBackendCard() {
                 fontSize = 9.sp
             )
         }
+    }
+}
+
+
+private data class BrowserHandoff(
+    val url: String?,
+    val detail: String
+)
+
+private fun parseCurrentBrowserUrl(raw: String): BrowserHandoff {
+    return runCatching {
+        val array = JSONArray(raw)
+        var fallback: String? = null
+
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val url = item.optString("url")
+                .takeIf {
+                    it.startsWith("http://") ||
+                        it.startsWith("https://")
+                }
+                ?: continue
+
+            if (item.optString("id") == "default") {
+                return BrowserHandoff(url, "default")
+            }
+            if (fallback == null) fallback = url
+        }
+
+        if (fallback != null) {
+            BrowserHandoff(fallback, "primera sesión activa")
+        } else {
+            BrowserHandoff(
+                null,
+                "El agente no tiene una página HTTP/HTTPS abierta"
+            )
+        }
+    }.getOrElse { error ->
+        BrowserHandoff(
+            null,
+            "Respuesta session_list inválida: " +
+                (error.message ?: "JSON inválido")
+        )
     }
 }

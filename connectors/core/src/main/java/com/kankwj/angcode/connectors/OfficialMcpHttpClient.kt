@@ -11,6 +11,14 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 
 /**
  * MCP client backed by the official Kotlin SDK.
@@ -114,6 +122,16 @@ class OfficialMcpHttpClient(
 
 private fun String.coerceMcpValue(): Any? {
     val value = trim()
+
+    if (
+        (value.startsWith("{") && value.endsWith("}")) ||
+        (value.startsWith("[") && value.endsWith("]"))
+    ) {
+        runCatching {
+            Json.parseToJsonElement(value).toPlainValue()
+        }.getOrNull()?.let { return it }
+    }
+
     if (value.equals("null", ignoreCase = true)) return null
     if (value.equals("true", ignoreCase = true)) return true
     if (value.equals("false", ignoreCase = true)) return false
@@ -121,3 +139,18 @@ private fun String.coerceMcpValue(): Any? {
     value.toDoubleOrNull()?.let { return it }
     return this
 }
+
+private fun JsonElement.toPlainValue(): Any? =
+    when (this) {
+        JsonNull -> null
+        is JsonPrimitive -> when {
+            isString -> content
+            booleanOrNull != null -> booleanOrNull
+            longOrNull != null -> longOrNull
+            doubleOrNull != null -> doubleOrNull
+            else -> content
+        }
+        is JsonArray -> map { it.toPlainValue() }
+        is JsonObject -> mapValues { (_, value) -> value.toPlainValue() }
+        else -> toString()
+    }

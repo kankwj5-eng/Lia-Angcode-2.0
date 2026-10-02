@@ -2,6 +2,9 @@ package com.kankwj.angcode.ui
 
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
+import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
@@ -118,7 +121,20 @@ fun BrowserScreen() {
                     settings.domStorageEnabled = true
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
+                    settings.allowFileAccessFromFileURLs = false
+                    settings.allowUniversalAccessFromFileURLs = false
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                    settings.setSupportMultipleWindows(false)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
                     webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            val scheme = request?.url?.scheme?.lowercase()
+                            return scheme != "http" && scheme != "https"
+                        }
+
                         override fun onPageFinished(view: WebView?, url: String?) {
                             if (!url.isNullOrBlank()) address = url
                         }

@@ -21,7 +21,8 @@ enum class ToolPermission {
     SHIZUKU_PRIVILEGED,
     SSH_REMOTE,
     ANDROID_UI_ACTION,
-    ADB_REMOTE
+    ADB_REMOTE,
+    GITHUB_READ
 }
 
 data class ToolContext(

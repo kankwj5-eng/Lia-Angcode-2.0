@@ -85,10 +85,11 @@ class SandboxInstallTool : AgentTool {
             ?: return ToolResponse(false, "image faltante o inválida")
         val name = call.arguments["name"]?.takeIf { SANDBOX_NAME.matches(it) }
 
-        val args = mutableListOf("install", image)
+        val args = mutableListOf("install")
         if (name != null) {
             args += listOf("--name", name)
         }
+        args += image
 
         return runProotDistro(context, args, 45 * 60_000L)
     }

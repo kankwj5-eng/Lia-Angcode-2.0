@@ -43,6 +43,7 @@ import com.kankwj.angcode.runtime.WorkspaceManager
 import com.kankwj.angcode.runtime.registerAndroidTools
 import com.kankwj.angcode.runtime.registerCoreTools
 import com.kankwj.angcode.runtime.registerModelTools
+import com.kankwj.angcode.connectors.registerLightpandaTools
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.Graphite
 import com.kankwj.angcode.ui.theme.InkWhite
@@ -69,6 +70,7 @@ fun ToolPackPanel() {
             .registerCoreTools()
             .registerAndroidTools(context)
             .registerModelTools(context)
+            .registerLightpandaTools(context)
     }
     val registered = remember(broker) { broker.availableTools().map { it.id }.toSet() }
     val executables = remember(refresh) { ExecutableDiscovery.forApp(context).asMap() }

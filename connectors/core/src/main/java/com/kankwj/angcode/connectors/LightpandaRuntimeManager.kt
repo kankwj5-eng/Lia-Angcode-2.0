@@ -4,8 +4,13 @@ import android.content.Context
 import android.os.Build
 import android.system.Os
 import com.kankwj.angcode.runtime.CommandRequest
+import com.kankwj.angcode.runtime.CommandRunner
 import com.kankwj.angcode.runtime.ProcessRegistry
+import com.kankwj.angcode.runtime.SandboxInstallTool
+import com.kankwj.angcode.runtime.ToolBroker
+import com.kankwj.angcode.runtime.ToolCall
 import com.kankwj.angcode.runtime.ToolContext
+import com.kankwj.angcode.runtime.ToolPermission
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
@@ -31,7 +36,18 @@ data class LightpandaStartResult(
     val success: Boolean,
     val processId: String?,
     val endpoint: String?,
-    val detail: String
+    val detail: String,
+    val registeredTools: Int = 0,
+    val sandboxName: String? = null
+)
+
+data class LightpandaStatus(
+    val installed: Boolean,
+    val running: Boolean,
+    val processId: String?,
+    val endpoint: String?,
+    val registeredTools: Int,
+    val sandboxName: String?
 )
 
 class LightpandaBinaryStore(
@@ -48,10 +64,8 @@ class LightpandaBinaryStore(
     fun manifestForDevice(): LightpandaBinaryManifest? {
         val abis = Build.SUPPORTED_ABIS.map(String::lowercase)
         return when {
-            abis.any { it == "arm64-v8a" || it == "aarch64" } ->
-                AARCH64
-            abis.any { it == "x86_64" || it == "amd64" } ->
-                X86_64
+            abis.any { it == "arm64-v8a" || it == "aarch64" } -> AARCH64
+            abis.any { it == "x86_64" || it == "amd64" } -> X86_64
             else -> null
         }
     }
@@ -75,6 +89,12 @@ class LightpandaBinaryStore(
                 setRequestProperty("User-Agent", "AngCode/0.2")
             }
 
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                connection.disconnect()
+                return LightpandaInstallResult(false, null, null, "HTTP " + status)
+            }
+
             connection.inputStream.use { input ->
                 temp.outputStream().buffered().use { output ->
                     val buffer = ByteArray(1024 * 1024)
@@ -90,14 +110,19 @@ class LightpandaBinaryStore(
             }
             connection.disconnect()
 
+            if (total != manifest.bytes) {
+                temp.delete()
+                return LightpandaInstallResult(
+                    false, null, null,
+                    "Tamaño inesperado: " + total + " bytes"
+                )
+            }
+
             val sha = digest.digest().joinToString("") { "%02x".format(it) }
             if (sha != manifest.sha256) {
                 temp.delete()
                 return LightpandaInstallResult(
-                    false,
-                    null,
-                    sha,
-                    "SHA-256 de Lightpanda no coincide"
+                    false, null, sha, "SHA-256 de Lightpanda no coincide"
                 )
             }
 
@@ -141,15 +166,62 @@ class LightpandaBinaryStore(
 
 class LightpandaRuntimeManager(
     context: Context,
-    private val processRegistry: ProcessRegistry = sharedProcesses
+    private val processRegistry: ProcessRegistry = sharedProcesses,
+    private val runner: CommandRunner = CommandRunner()
 ) {
     private val appContext = context.applicationContext
     private val binaryStore = LightpandaBinaryStore(appContext)
 
+    fun install(): LightpandaInstallResult = binaryStore.install()
+
+    fun startAndRegister(
+        context: ToolContext,
+        broker: ToolBroker,
+        sandboxName: String = DEFAULT_SANDBOX,
+        image: String = DEFAULT_IMAGE,
+        port: Int = DEFAULT_PORT
+    ): LightpandaStartResult {
+        val sandbox = ensureSandbox(context, sandboxName, image)
+        if (sandbox != null) {
+            return LightpandaStartResult(false, null, null, sandbox, sandboxName = sandboxName)
+        }
+
+        val started = start(context, sandboxName, port)
+        if (!started.success) return started
+
+        val client = ConnectorSessionRegistry.get(SESSION_ID)
+            ?: return stopAfterRegistrationFailure(
+                broker, "MCP arrancó pero no existe sesión registrada"
+            )
+
+        return runCatching {
+            val info = broker.connectMcp(
+                client = client,
+                namespace = "browser",
+                permissions = setOf(
+                    ToolPermission.NETWORK,
+                    ToolPermission.PRIVATE_NETWORK,
+                    ToolPermission.MCP_EXTERNAL
+                )
+            )
+            currentToolIds = info.registeredTools.toSet()
+            started.copy(
+                detail = "Lightpanda MCP listo · " + info.registeredTools.size + " herramientas",
+                registeredTools = info.registeredTools.size,
+                sandboxName = sandboxName
+            )
+        }.getOrElse { error ->
+            stopAfterRegistrationFailure(
+                broker,
+                error.message ?: "No se pudieron registrar herramientas MCP"
+            )
+        }
+    }
+
     fun start(
         context: ToolContext,
-        sandboxName: String = "angcode-browser",
-        port: Int = 9223
+        sandboxName: String = DEFAULT_SANDBOX,
+        port: Int = DEFAULT_PORT
     ): LightpandaStartResult {
         require(port in 1024..65535)
 
@@ -164,13 +236,15 @@ class LightpandaRuntimeManager(
                 return LightpandaStartResult(
                     true,
                     id,
-                    endpoint(port),
-                    "Lightpanda ya estaba ejecutándose"
+                    currentEndpoint ?: endpoint(port),
+                    "Lightpanda ya estaba ejecutándose",
+                    registeredTools = currentToolIds.size,
+                    sandboxName = currentSandboxName ?: sandboxName
                 )
             }
         }
 
-        val guestBinary = "/opt/angcode/lightpanda"
+        val guestBinary = "/tmp/angcode-lightpanda"
         val args = listOf(
             "login",
             "--isolated",
@@ -179,6 +253,9 @@ class LightpandaRuntimeManager(
             binary.canonicalPath + ":" + guestBinary,
             sandboxName,
             "--",
+            "/usr/bin/env",
+            "LIGHTPANDA_DISABLE_TELEMETRY=true",
+            "LIGHTPANDA_DISABLE_CORE_DUMP=1",
             guestBinary,
             "mcp",
             "--host",
@@ -196,17 +273,20 @@ class LightpandaRuntimeManager(
             )
         )
         currentProcessId = id
+        currentSandboxName = sandboxName
+        currentEndpoint = endpoint(port)
 
-        if (!waitForPort(port, 20_000)) {
+        if (!waitForPort(port, 30_000)) {
             val logs = processRegistry.snapshot(id)
             processRegistry.stop(id)
-            currentProcessId = null
+            clearRuntimeState()
             return LightpandaStartResult(
                 false,
                 id,
                 null,
                 "Lightpanda no abrió el puerto. " +
-                    (logs?.stderr?.takeLast(1200) ?: "")
+                    (logs?.stderr?.takeLast(1200) ?: ""),
+                sandboxName = sandboxName
             )
         }
 
@@ -214,36 +294,104 @@ class LightpandaRuntimeManager(
         val client = OfficialMcpHttpClient(endpoint)
         return runCatching {
             client.connect()
-            ConnectorSessionRegistry.put("browser", client)
+            ConnectorSessionRegistry.put(SESSION_ID, client)
             LightpandaStartResult(
                 true,
                 id,
                 endpoint,
-                "Lightpanda MCP conectado"
+                "Lightpanda MCP conectado",
+                sandboxName = sandboxName
             )
         }.getOrElse { error ->
             processRegistry.stop(id)
-            currentProcessId = null
+            clearRuntimeState()
             LightpandaStartResult(
                 false,
                 id,
                 null,
-                error.message ?: "No se pudo conectar MCP"
+                error.message ?: "No se pudo conectar MCP",
+                sandboxName = sandboxName
             )
         }
     }
 
-    fun stop(): Boolean {
-        ConnectorSessionRegistry.remove("browser")
-        val id = currentProcessId ?: return true
-        currentProcessId = null
-        return processRegistry.stop(id)
+    fun stop(broker: ToolBroker? = null): Boolean {
+        broker?.unregisterAll(currentToolIds)
+        currentToolIds = emptySet()
+        ConnectorSessionRegistry.remove(SESSION_ID)
+
+        val id = currentProcessId
+        clearRuntimeState()
+        return id == null || processRegistry.stop(id)
     }
+
+    fun status(): LightpandaStatus =
+        LightpandaStatus(
+            installed = binaryStore.installedBinary() != null,
+            running = running(),
+            processId = currentProcessId,
+            endpoint = currentEndpoint,
+            registeredTools = currentToolIds.size,
+            sandboxName = currentSandboxName
+        )
 
     fun running(): Boolean =
         currentProcessId?.let { processRegistry.snapshot(it)?.running } == true
 
-    fun processId(): String? = currentProcessId
+    private fun ensureSandbox(
+        context: ToolContext,
+        sandboxName: String,
+        image: String
+    ): String? {
+        val prootDistro = context.executables["proot-distro"]
+            ?: return "proot-distro no está disponible"
+
+        val list = runner.run(
+            CommandRequest(
+                executable = prootDistro,
+                arguments = listOf("list", "--quiet"),
+                workingDirectory = context.workspace,
+                timeoutMillis = 30_000,
+                environment = prootEnvironment(prootDistro)
+            )
+        )
+
+        if (!list.succeeded) {
+            return "No se pudo consultar sandboxes: " +
+                list.stderr.ifBlank { "exit=" + list.exitCode }
+        }
+
+        val installed = list.stdout.lineSequence()
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .toSet()
+
+        if (sandboxName in installed) return null
+
+        val install = SandboxInstallTool().invoke(
+            ToolCall(
+                "sandbox.install",
+                mapOf("image" to image, "name" to sandboxName)
+            ),
+            context
+        )
+        return if (install.ok) null else install.output
+    }
+
+    private fun stopAfterRegistrationFailure(
+        broker: ToolBroker,
+        detail: String
+    ): LightpandaStartResult {
+        val id = currentProcessId
+        stop(broker)
+        return LightpandaStartResult(
+            false,
+            id,
+            null,
+            detail,
+            sandboxName = currentSandboxName
+        )
+    }
 
     private fun endpoint(port: Int) = "http://127.0.0.1:" + port + "/mcp"
 
@@ -271,13 +419,26 @@ class LightpandaRuntimeManager(
             "HOME" to File(files, "home").apply { mkdirs() }.absolutePath,
             "TMPDIR" to File(prefix, "tmp").apply { mkdirs() }.absolutePath,
             "PATH" to (bin.absolutePath + ":" + System.getenv("PATH").orEmpty()),
-            "LIGHTPANDA_DISABLE_TELEMETRY" to "true",
             "LANG" to "C.UTF-8"
         )
     }
 
+    private fun clearRuntimeState() {
+        currentProcessId = null
+        currentEndpoint = null
+        currentSandboxName = null
+    }
+
     companion object {
+        const val DEFAULT_SANDBOX = "angcode-browser"
+        const val DEFAULT_IMAGE = "debian:bookworm-slim"
+        const val DEFAULT_PORT = 9223
+        private const val SESSION_ID = "browser"
+
         private val sharedProcesses = ProcessRegistry()
         @Volatile private var currentProcessId: String? = null
+        @Volatile private var currentEndpoint: String? = null
+        @Volatile private var currentSandboxName: String? = null
+        @Volatile private var currentToolIds: Set<String> = emptySet()
     }
 }

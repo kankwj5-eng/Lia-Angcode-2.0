@@ -55,6 +55,16 @@ class ToolBroker {
         tools[tool.id] = tool
     }
 
+    fun unregister(id: String): AgentTool? = tools.remove(id)
+
+    fun unregisterAll(ids: Iterable<String>): Int {
+        var removed = 0
+        ids.forEach { id ->
+            if (tools.remove(id) != null) removed++
+        }
+        return removed
+    }
+
     fun availableTools(): List<AgentTool> = tools.values.sortedBy { it.id }
 
     fun execute(call: ToolCall, context: ToolContext): ToolResponse {

@@ -1,10 +1,14 @@
 {
   "id": "lightpanda-browser",
   "name": "Lightpanda Browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Navegador headless ligero para agentes, ejecutado como proceso separado dentro de un userland glibc.",
   "packages": [],
   "tools": [
+    "browser_runtime.status",
+    "browser_runtime.stop",
+    "browser_runtime.start",
+    "browser_runtime.install",
     "browser.goto",
     "browser.markdown",
     "browser.extract",
@@ -18,9 +22,19 @@
     "browser.session.list",
     "browser.session.close"
   ],
-  "permissions": ["NETWORK", "WORKSPACE_WRITE", "PROCESS_EXECUTE"],
+  "permissions": [
+    "NETWORK",
+    "WORKSPACE_WRITE",
+    "PROCESS_EXECUTE",
+    "PRIVATE_NETWORK",
+    "MCP_EXTERNAL",
+    "SANDBOX_MANAGE"
+  ],
   "runtime": "PROOT",
-  "architectures": ["aarch64", "x86_64"],
+  "architectures": [
+    "aarch64",
+    "x86_64"
+  ],
   "upstream": {
     "name": "Lightpanda Browser",
     "license": "AGPL-3.0-only",

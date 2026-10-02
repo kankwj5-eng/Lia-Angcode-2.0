@@ -442,6 +442,7 @@ private fun SettingsScreen() {
         ModelSetupCard()
         GitHubSetupCard()
         ShizukuSetupCard()
+        RootSetupCard()
         connectors.forEach { connector ->
             InfoCard(Icons.Rounded.Public, connector.name, connector.description)
         }

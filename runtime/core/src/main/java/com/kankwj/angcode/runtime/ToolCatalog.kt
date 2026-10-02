@@ -92,6 +92,7 @@ object ToolCatalog {
         ToolCapability("android.launch_app", ToolFamily.ANDROID, "Abrir app por package", CapabilityStatus.BUILT_IN),
         ToolCapability("android.api.*", ToolFamily.ANDROID, "Más APIs del teléfono", CapabilityStatus.READY_TO_ADAPT, "termux/termux-api"),
         ToolCapability("android.shizuku.*", ToolFamily.ANDROID, "Backend privilegiado vía Shizuku", CapabilityStatus.OPTIONAL_BACKEND, "RikkaApps/Shizuku"),
+        ToolCapability("android.shizuku.screenshot", ToolFamily.ANDROID, "Captura PNG privilegiada a artifacts", CapabilityStatus.OPTIONAL_BACKEND, "RikkaApps/Shizuku"),
         ToolCapability("android.root.*", ToolFamily.ANDROID, "Backend root opcional", CapabilityStatus.OPTIONAL_BACKEND, "topjohnwu/libsu"),
 
         ToolCapability("sandbox.*", ToolFamily.SANDBOX, "Linux PRoot administrado por proyecto", CapabilityStatus.BUILT_IN, "termux/proot-distro"),

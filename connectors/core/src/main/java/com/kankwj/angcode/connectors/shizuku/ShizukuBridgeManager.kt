@@ -166,6 +166,48 @@ object ShizukuBridgeManager {
         )
     }
 
+    fun captureScreen(output: File): ToolResponse {
+        val remote = service
+            ?: return ToolResponse(false, "Shizuku UserService no conectado")
+
+        output.parentFile?.mkdirs()
+        val descriptor = ParcelFileDescriptor.open(
+            output,
+            ParcelFileDescriptor.MODE_CREATE or
+                ParcelFileDescriptor.MODE_WRITE_ONLY or
+                ParcelFileDescriptor.MODE_TRUNCATE
+        )
+
+        val response = runCatching {
+            remote.captureScreen(descriptor)
+        }.getOrElse {
+            runCatching { descriptor.close() }
+            service = null
+            output.delete()
+            return ToolResponse(false, it.message ?: "Falló captura Shizuku")
+        }
+
+        val validPng = isPngFile(output)
+        val ok = response.startsWith("exit=0") && validPng
+
+        if (!ok) {
+            output.delete()
+        }
+
+        return ToolResponse(
+            ok = ok,
+            output = if (ok) {
+                output.absolutePath
+            } else {
+                response + if (!validPng) "\nPNG inválido" else ""
+            },
+            metadata = mapOf(
+                "backend" to "shizuku",
+                "bytes" to if (output.exists()) output.length().toString() else "0"
+            )
+        )
+    }
+
     fun installApk(
         apk: File,
         replaceExisting: Boolean = true
@@ -301,12 +343,68 @@ class ShizukuInstallApkTool : AgentTool {
     }
 }
 
+class ShizukuScreenshotTool : AgentTool {
+    override val id = "android.shizuku.screenshot"
+    override val description = "Captura la pantalla mediante screencap privilegiado y guarda PNG en artifacts/."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_WRITE,
+        ToolPermission.SHIZUKU_PRIVILEGED
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val artifacts = File(context.workspace, "artifacts").apply { mkdirs() }
+        val requested = call.arguments["name"]
+            ?.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            ?.take(100)
+            ?.takeIf { it.isNotBlank() }
+        val fileName = when {
+            requested == null ->
+                "screenshot-" + System.currentTimeMillis() + ".png"
+            requested.endsWith(".png", ignoreCase = true) ->
+                requested
+            else ->
+                requested + ".png"
+        }
+
+        val output = File(artifacts, fileName).canonicalFile
+        if (!output.toPath().startsWith(artifacts.canonicalFile.toPath())) {
+            return ToolResponse(false, "Ruta de captura inválida")
+        }
+
+        val result = ShizukuBridgeManager.captureScreen(output)
+        return if (result.ok) {
+            result.copy(
+                output = output.relativeTo(context.workspace).invariantSeparatorsPath,
+                metadata = result.metadata + mapOf(
+                    "artifact" to output.relativeTo(context.workspace).invariantSeparatorsPath
+                )
+            )
+        } else {
+            result
+        }
+    }
+}
+
 fun ToolBroker.registerShizukuTools(): ToolBroker = apply {
     register(ShizukuStatusTool())
     register(ShizukuPackageInfoTool())
     register(ShizukuLaunchAppTool())
     register(ShizukuLogcatTool())
     register(ShizukuInstallApkTool())
+    register(ShizukuScreenshotTool())
+}
+
+internal fun isPngFile(file: File): Boolean {
+    if (!file.isFile || file.length() < 8L) return false
+    val expected = byteArrayOf(
+        0x89.toByte(), 0x50, 0x4E, 0x47,
+        0x0D, 0x0A, 0x1A, 0x0A
+    )
+    val actual = ByteArray(8)
+    file.inputStream().use { input ->
+        if (input.read(actual) != actual.size) return false
+    }
+    return actual.contentEquals(expected)
 }
 
 private fun validPackageName(value: String): Boolean =

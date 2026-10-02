@@ -5,6 +5,7 @@ import android.os.ParcelFileDescriptor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Set;
@@ -52,6 +53,60 @@ public final class AngCodePrivilegedService extends IAngCodePrivilegedService.St
              FileInputStream input = new FileInputStream(descriptor.getFileDescriptor())) {
             return runProcess(command, 180_000, input);
         } catch (Throwable error) {
+            return "ERROR: " + error;
+        }
+    }
+
+    @Override
+    public String captureScreen(ParcelFileDescriptor output) {
+        if (output == null) return "ERROR: descriptor de salida nulo";
+
+        Process process = null;
+        Thread errorThread = null;
+        final ByteArrayOutputStream errorOutput = new ByteArrayOutputStream();
+
+        try (ParcelFileDescriptor descriptor = output;
+             FileOutputStream target = new FileOutputStream(descriptor.getFileDescriptor())) {
+            process = new ProcessBuilder("screencap", "-p")
+                    .redirectErrorStream(false)
+                    .start();
+            process.getOutputStream().close();
+
+            final Process active = process;
+            errorThread = new Thread(() -> copyLimited(active.getErrorStream(), errorOutput));
+            errorThread.setDaemon(true);
+            errorThread.start();
+
+            byte[] buffer = new byte[256 * 1024];
+            long total = 0L;
+            try (InputStream source = process.getInputStream()) {
+                while (true) {
+                    int read = source.read(buffer);
+                    if (read <= 0) break;
+                    total += read;
+                    if (total > 64L * 1024L * 1024L) {
+                        process.destroyForcibly();
+                        return "ERROR: captura demasiado grande";
+                    }
+                    target.write(buffer, 0, read);
+                }
+            }
+            target.flush();
+
+            boolean completed = process.waitFor(30_000, TimeUnit.MILLISECONDS);
+            if (!completed) {
+                process.destroyForcibly();
+                return "ERROR: timeout de screencap";
+            }
+
+            if (errorThread != null) errorThread.join(1_000);
+            String stderr = errorOutput.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+
+            return "exit=" + process.exitValue() +
+                    "\nbytes=" + total +
+                    (stderr.isEmpty() ? "" : "\nstderr=" + stderr);
+        } catch (Throwable error) {
+            if (process != null) process.destroyForcibly();
             return "ERROR: " + error;
         }
     }

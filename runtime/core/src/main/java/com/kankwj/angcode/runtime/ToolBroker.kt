@@ -20,7 +20,8 @@ enum class ToolPermission {
     MODEL_MANAGE,
     SHIZUKU_PRIVILEGED,
     SSH_REMOTE,
-    ANDROID_UI_ACTION
+    ANDROID_UI_ACTION,
+    ADB_REMOTE
 }
 
 data class ToolContext(

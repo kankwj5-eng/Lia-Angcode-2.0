@@ -1,6 +1,7 @@
 package com.kankwj.angcode.connectors
 
 import android.content.Context
+import android.util.Base64
 import com.kankwj.angcode.runtime.AgentTool
 import com.kankwj.angcode.runtime.ToolBroker
 import com.kankwj.angcode.runtime.ToolCall
@@ -150,6 +151,140 @@ class GitHubApiClient(
         return out.joinToString("\n")
     }
 
+    fun createBranch(
+        owner: String,
+        repo: String,
+        branch: String,
+        fromSha: String
+    ): String {
+        requireRepo(owner, repo)
+        require(GitHubRefs.validBranch(branch)) { "branch inválida" }
+        require(fromSha.matches(Regex("^[0-9a-fA-F]{40,64}$"))) {
+            "fromSha inválido"
+        }
+
+        val body = JSONObject()
+            .put("ref", "refs/heads/" + branch)
+            .put("sha", fromSha)
+            .toString()
+
+        val root = JSONObject(
+            requireSuccess(
+                request(
+                    method = "POST",
+                    path = "/repos/$owner/$repo/git/refs",
+                    body = body
+                )
+            )
+        )
+
+        return "ref=" + root.optString("ref") +
+            "\nsha=" + root.optJSONObject("object")?.optString("sha").orEmpty()
+    }
+
+    fun putFile(
+        owner: String,
+        repo: String,
+        path: String,
+        branch: String,
+        message: String,
+        content: String,
+        expectedSha: String?
+    ): String {
+        requireRepo(owner, repo)
+        require(GitHubPaths.validRepositoryPath(path)) { "path inválido" }
+        require(GitHubRefs.validBranch(branch)) { "branch inválida" }
+        require(message.trim().length in 1..500) { "message inválido" }
+        require(content.length <= MAX_WRITE_CONTENT_CHARS) {
+            "content demasiado grande para github.file.put"
+        }
+        if (expectedSha != null) {
+            require(expectedSha.matches(Regex("^[0-9a-fA-F]{40,64}$"))) {
+                "expectedSha inválido"
+            }
+        }
+
+        val encodedPath = path
+            .split('/')
+            .joinToString("/") {
+                URLEncoder.encode(it, Charsets.UTF_8.name()).replace("+", "%20")
+            }
+
+        val payload = JSONObject()
+            .put("message", message.trim())
+            .put(
+                "content",
+                Base64.encodeToString(
+                    content.toByteArray(Charsets.UTF_8),
+                    Base64.NO_WRAP
+                )
+            )
+            .put("branch", branch)
+
+        if (expectedSha != null) {
+            payload.put("sha", expectedSha)
+        }
+
+        val root = JSONObject(
+            requireSuccess(
+                request(
+                    method = "PUT",
+                    path = "/repos/$owner/$repo/contents/$encodedPath",
+                    body = payload.toString()
+                )
+            )
+        )
+
+        val commit = root.optJSONObject("commit")
+        val file = root.optJSONObject("content")
+        return buildString {
+            appendLine("commit=" + commit?.optString("sha").orEmpty())
+            appendLine("fileSha=" + file?.optString("sha").orEmpty())
+            append("html_url=" + file?.optString("html_url").orEmpty())
+        }
+    }
+
+    fun createPullRequest(
+        owner: String,
+        repo: String,
+        title: String,
+        head: String,
+        base: String,
+        bodyText: String?
+    ): String {
+        requireRepo(owner, repo)
+        require(title.trim().length in 1..240) { "title inválido" }
+        require(GitHubRefs.validBranch(head)) { "head inválida" }
+        require(GitHubRefs.validBranch(base)) { "base inválida" }
+        require(bodyText == null || bodyText.length <= 20_000) {
+            "body demasiado grande"
+        }
+
+        val payload = JSONObject()
+            .put("title", title.trim())
+            .put("head", head)
+            .put("base", base)
+        if (!bodyText.isNullOrBlank()) {
+            payload.put("body", bodyText)
+        }
+
+        val root = JSONObject(
+            requireSuccess(
+                request(
+                    method = "POST",
+                    path = "/repos/$owner/$repo/pulls",
+                    body = payload.toString()
+                )
+            )
+        )
+
+        return buildString {
+            appendLine("number=" + root.optInt("number"))
+            appendLine("state=" + root.optString("state"))
+            append("html_url=" + root.optString("html_url"))
+        }
+    }
+
     fun actions(owner: String, repo: String, limit: Int): String {
         requireRepo(owner, repo)
         val body = requireSuccess(
@@ -183,8 +318,21 @@ class GitHubApiClient(
     private fun get(
         path: String,
         query: Map<String, String> = emptyMap()
+    ): GitHubHttpResponse =
+        request("GET", path, query)
+
+    private fun request(
+        method: String,
+        path: String,
+        query: Map<String, String> = emptyMap(),
+        body: String? = null
     ): GitHubHttpResponse {
+        require(method in setOf("GET", "POST", "PUT")) { "Método GitHub no permitido" }
         require(path.startsWith("/") && !path.startsWith("//"))
+        require(body == null || body.length <= MAX_REQUEST_CHARS) {
+            "Solicitud GitHub demasiado grande"
+        }
+
         val token = tokenStore.load()
             ?: error("Conector GitHub no configurado")
 
@@ -201,11 +349,19 @@ class GitHubApiClient(
         connection.connectTimeout = 12_000
         connection.readTimeout = 20_000
         connection.instanceFollowRedirects = false
-        connection.requestMethod = "GET"
+        connection.requestMethod = method
         connection.setRequestProperty("Accept", "application/vnd.github+json")
         connection.setRequestProperty("Authorization", "Bearer " + token)
         connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
         connection.setRequestProperty("User-Agent", "AngCode/0.2")
+
+        if (body != null) {
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write(body)
+            }
+        }
 
         return try {
             val status = connection.responseCode
@@ -249,13 +405,18 @@ class GitHubApiClient(
 
     companion object {
         private const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+        private const val MAX_REQUEST_CHARS = 2 * 1024 * 1024
+        private const val MAX_WRITE_CONTENT_CHARS = 1 * 1024 * 1024
     }
 }
 
 private abstract class GitHubReadTool(
     protected val client: GitHubApiClient
 ) : AgentTool {
-    override val requiredPermissions = setOf(ToolPermission.GITHUB_READ)
+    override val requiredPermissions = setOf(
+        ToolPermission.NETWORK,
+        ToolPermission.GITHUB_READ
+    )
 
     protected fun ownerRepo(call: ToolCall): Pair<String, String>? {
         val owner = call.arguments["owner"] ?: return null
@@ -335,6 +496,104 @@ private class GitHubActionsTool(client: GitHubApiClient) : GitHubReadTool(client
     }
 }
 
+private abstract class GitHubWriteTool(
+    protected val client: GitHubApiClient
+) : AgentTool {
+    override val requiredPermissions = setOf(
+        ToolPermission.NETWORK,
+        ToolPermission.GITHUB_WRITE
+    )
+
+    protected fun ownerRepo(call: ToolCall): Pair<String, String>? {
+        val owner = call.arguments["owner"] ?: return null
+        val repo = call.arguments["repo"] ?: return null
+        if (!GitHubNames.validOwner(owner) || !GitHubNames.validRepo(repo)) return null
+        return owner to repo
+    }
+}
+
+private class GitHubCreateBranchTool(client: GitHubApiClient) : GitHubWriteTool(client) {
+    override val id = "github.branch.create"
+    override val description = "Crea una rama GitHub desde un SHA explícito."
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val (owner, repo) = ownerRepo(call)
+            ?: return ToolResponse(false, "owner/repo faltante o inválido")
+        val branch = call.arguments["branch"]
+            ?: return ToolResponse(false, "Falta branch")
+        val fromSha = call.arguments["fromSha"]
+            ?: return ToolResponse(false, "Falta fromSha")
+
+        return runCatching {
+            ToolResponse(true, client.createBranch(owner, repo, branch, fromSha))
+        }.getOrElse { ToolResponse(false, it.message ?: "GitHub falló") }
+    }
+}
+
+private class GitHubPutFileTool(client: GitHubApiClient) : GitHubWriteTool(client) {
+    override val id = "github.file.put"
+    override val description =
+        "Crea un archivo o actualiza uno existente; para actualizar exige expectedSha."
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val (owner, repo) = ownerRepo(call)
+            ?: return ToolResponse(false, "owner/repo faltante o inválido")
+        val path = call.arguments["path"]
+            ?: return ToolResponse(false, "Falta path")
+        val branch = call.arguments["branch"]
+            ?: return ToolResponse(false, "Falta branch")
+        val message = call.arguments["message"]
+            ?: return ToolResponse(false, "Falta message")
+        val content = call.arguments["content"]
+            ?: return ToolResponse(false, "Falta content")
+
+        return runCatching {
+            ToolResponse(
+                true,
+                client.putFile(
+                    owner = owner,
+                    repo = repo,
+                    path = path,
+                    branch = branch,
+                    message = message,
+                    content = content,
+                    expectedSha = call.arguments["expectedSha"]
+                )
+            )
+        }.getOrElse { ToolResponse(false, it.message ?: "GitHub falló") }
+    }
+}
+
+private class GitHubCreatePullRequestTool(client: GitHubApiClient) : GitHubWriteTool(client) {
+    override val id = "github.pr.create"
+    override val description = "Abre un pull request dentro del mismo repositorio."
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val (owner, repo) = ownerRepo(call)
+            ?: return ToolResponse(false, "owner/repo faltante o inválido")
+        val title = call.arguments["title"]
+            ?: return ToolResponse(false, "Falta title")
+        val head = call.arguments["head"]
+            ?: return ToolResponse(false, "Falta head")
+        val base = call.arguments["base"]
+            ?: return ToolResponse(false, "Falta base")
+
+        return runCatching {
+            ToolResponse(
+                true,
+                client.createPullRequest(
+                    owner = owner,
+                    repo = repo,
+                    title = title,
+                    head = head,
+                    base = base,
+                    bodyText = call.arguments["body"]
+                )
+            )
+        }.getOrElse { ToolResponse(false, it.message ?: "GitHub falló") }
+    }
+}
+
 fun ToolBroker.registerGitHubTools(context: Context): ToolBroker = apply {
     val client = GitHubApiClient(context.applicationContext)
     register(GitHubRepoTool(client))
@@ -342,4 +601,7 @@ fun ToolBroker.registerGitHubTools(context: Context): ToolBroker = apply {
     register(GitHubPullsTool(client))
     register(GitHubBranchesTool(client))
     register(GitHubActionsTool(client))
+    register(GitHubCreateBranchTool(client))
+    register(GitHubPutFileTool(client))
+    register(GitHubCreatePullRequestTool(client))
 }

@@ -25,6 +25,8 @@ import com.kankwj.angcode.connectors.GitHubTokenStore
 import com.kankwj.angcode.connectors.registerGitHubTools
 import com.kankwj.angcode.connectors.connectMcp
 import com.kankwj.angcode.connectors.registerLightpandaTools
+import com.kankwj.angcode.connectors.root.RootBridgeManager
+import com.kankwj.angcode.connectors.root.registerRootTools
 import com.kankwj.angcode.connectors.shizuku.ShizukuBridgeManager
 import com.kankwj.angcode.connectors.shizuku.registerShizukuTools
 import com.kankwj.angcode.runtime.ActiveProjectStore
@@ -81,6 +83,12 @@ class LocalMissionExecutor(
         val executables = ExecutableDiscovery.forApp(appContext).asMap()
         val advancedAndroid = MissionCapability.ANDROID_DEVICE in analysis.capabilities
         val shizuku = ShizukuBridgeManager.status()
+        val githubReady =
+            MissionCapability.GITHUB_CONNECTOR in analysis.capabilities &&
+                GitHubTokenStore(appContext).hasToken()
+        val rootReady =
+            advancedAndroid &&
+                RootBridgeManager.ready(appContext)
 
         return listOf(
             MissionPrivilegeOption(
@@ -116,6 +124,20 @@ class LocalMissionExecutor(
                     ToolPermission.PRIVATE_NETWORK
                 ),
                 available = "adb" in executables
+            ),
+            MissionPrivilegeOption(
+                id = "github-write",
+                title = "GitHub escritura",
+                detail = "Permite crear ramas, crear/actualizar archivos con SHA esperado y abrir PRs.",
+                permissions = setOf(ToolPermission.GITHUB_WRITE),
+                available = githubReady
+            ),
+            MissionPrivilegeOption(
+                id = "root",
+                title = "Root avanzado",
+                detail = "Permite herramientas root limitadas: package info, logcat y lectura de settings.",
+                permissions = setOf(ToolPermission.ROOT_PRIVILEGED),
+                available = rootReady
             ),
             MissionPrivilegeOption(
                 id = "ssh",
@@ -181,8 +203,10 @@ class LocalMissionExecutor(
             ToolPermission.CLIPBOARD_WRITE,
             ToolPermission.ANDROID_UI_ACTION,
             ToolPermission.SHIZUKU_PRIVILEGED,
+            ToolPermission.ROOT_PRIVILEGED,
             ToolPermission.ADB_REMOTE,
             ToolPermission.SSH_REMOTE,
+            ToolPermission.GITHUB_WRITE,
             ToolPermission.PRIVATE_NETWORK
         )
         val approved = approvedPermissions.intersect(allowedElevated)
@@ -194,6 +218,15 @@ class LocalMissionExecutor(
 
         if (shizukuReady) {
             broker.registerShizukuTools()
+        }
+
+        val rootMissionReady =
+            wantsAdvancedAndroid &&
+                ToolPermission.ROOT_PRIVILEGED in approved &&
+                RootBridgeManager.ready(appContext)
+
+        if (rootMissionReady) {
+            broker.registerRootTools(appContext)
         }
 
         val permissions = mutableSetOf(
@@ -212,9 +245,15 @@ class LocalMissionExecutor(
         }
         if (githubReady) {
             permissions += ToolPermission.GITHUB_READ
+            if (ToolPermission.GITHUB_WRITE in approved) {
+                permissions += ToolPermission.GITHUB_WRITE
+            }
         }
         if (shizukuReady) {
             permissions += ToolPermission.SHIZUKU_PRIVILEGED
+        }
+        if (rootMissionReady) {
+            permissions += ToolPermission.ROOT_PRIVILEGED
         }
         if (ToolPermission.CLIPBOARD_READ in approved) {
             permissions += ToolPermission.CLIPBOARD_READ

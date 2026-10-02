@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 enum class ToolPermission {
     WORKSPACE_READ,
     WORKSPACE_WRITE,
+    ARTIFACT_WRITE,
     PROCESS_EXECUTE,
     UNRESTRICTED_SHELL,
     NETWORK,

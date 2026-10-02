@@ -139,4 +139,8 @@ fun ToolBroker.registerCoreTools(
     register(MediaProbeTool())
     register(MediaConvertTool())
     register(ImageConvertTool())
+
+    register(SshExecTool())
+    register(SshUploadTool())
+    register(SshDownloadTool())
 }

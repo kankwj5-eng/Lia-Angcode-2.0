@@ -1,0 +1,16 @@
+{
+  "id": "remote-ssh",
+  "name": "Remote SSH",
+  "version": "0.1.0",
+  "description": "Delegación segura a otra máquina mediante OpenSSH y SCP.",
+  "packages": ["openssh"],
+  "tools": ["ssh.exec", "ssh.upload", "ssh.download"],
+  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE", "NETWORK", "SSH_REMOTE"],
+  "runtime": "ANDROID_NATIVE",
+  "architectures": ["aarch64", "arm", "x86_64", "i686"],
+  "upstream": {
+    "name": "OpenSSH",
+    "license": "BSD",
+    "source": "https://github.com/openssh/openssh-portable"
+  }
+}

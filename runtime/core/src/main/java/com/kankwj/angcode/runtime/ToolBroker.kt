@@ -18,7 +18,8 @@ enum class ToolPermission {
     SANDBOX_MANAGE,
     WORKTREE_MANAGE,
     MODEL_MANAGE,
-    SHIZUKU_PRIVILEGED
+    SHIZUKU_PRIVILEGED,
+    SSH_REMOTE
 }
 
 data class ToolContext(

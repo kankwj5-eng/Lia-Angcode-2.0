@@ -61,7 +61,7 @@ object ToolCatalog {
         ToolCapability("checkpoint.list", ToolFamily.ARCHIVE, "Listar checkpoints", CapabilityStatus.BUILT_IN),
         ToolCapability("checkpoint.restore", ToolFamily.ARCHIVE, "Restaurar checkpoint", CapabilityStatus.BUILT_IN),
 
-        ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git local cuando el runtime tenga el binario", CapabilityStatus.READY_TO_ADAPT, "git/git"),
+        ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git local estructurado", CapabilityStatus.BUILT_IN, "git/git"),
         ToolCapability("code.ast.parse", ToolFamily.CODE_INTELLIGENCE, "AST con Tree-sitter cuando hay gramática", CapabilityStatus.BUILT_IN, "tree-sitter/tree-sitter"),
         ToolCapability("python.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar script/código Python", CapabilityStatus.BUILT_IN),
         ToolCapability("python.test", ToolFamily.CODE_INTELLIGENCE, "Ejecutar pytest", CapabilityStatus.BUILT_IN),
@@ -90,8 +90,10 @@ object ToolCatalog {
 
         ToolCapability("sandbox.*", ToolFamily.SANDBOX, "Linux PRoot administrado por proyecto", CapabilityStatus.BUILT_IN, "termux/proot-distro"),
 
-        ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Herramientas MCP dinámicas", CapabilityStatus.READY_TO_ADAPT, "modelcontextprotocol/kotlin-sdk"),
-        ToolCapability("browser.lightpanda.*", ToolFamily.CONNECTOR, "Navegador headless por MCP/CDP", CapabilityStatus.READY_TO_ADAPT, "lightpanda-io/browser"),
-        ToolCapability("ssh.*", ToolFamily.CONNECTOR, "Delegación a otra máquina", CapabilityStatus.PLANNED)
+        ToolCapability("mcp.*", ToolFamily.CONNECTOR, "Herramientas MCP dinámicas", CapabilityStatus.BUILT_IN, "modelcontextprotocol/kotlin-sdk"),
+        ToolCapability("browser.*", ToolFamily.CONNECTOR, "Navegador headless Lightpanda por MCP", CapabilityStatus.BUILT_IN, "lightpanda-io/browser"),
+        ToolCapability("ssh.exec", ToolFamily.CONNECTOR, "Ejecutar comando remoto con host key estricta", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
+        ToolCapability("ssh.upload", ToolFamily.CONNECTOR, "Subir archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
+        ToolCapability("ssh.download", ToolFamily.CONNECTOR, "Descargar archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable")
     )
 }

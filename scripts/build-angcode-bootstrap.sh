@@ -11,6 +11,28 @@ ANGCODE_APP_NAME="AngCode"
 ANGCODE_DATA_DIR="/data/data/${ANGCODE_APP_PACKAGE}"
 ANGCODE_BUILT_MARKERS="/data/data/.built-packages-angcode"
 
+# This script intentionally deletes WORKDIR before every reproducible build.
+# Refuse generic or high-value paths even if WORKDIR was supplied externally.
+WORKDIR="$(python3 - "$WORKDIR" <<'PY'
+import os
+import sys
+print(os.path.abspath(sys.argv[1]))
+PY
+)"
+case "$(basename "$WORKDIR")" in
+  .angcode-runtime-build|angcode-runtime-build|angcode-runtime-build-*) ;;
+  *)
+    echo "Refusing unsafe WORKDIR: $WORKDIR" >&2
+    exit 24
+    ;;
+esac
+case "$WORKDIR" in
+  /|"$HOME"|"$PWD")
+    echo "Refusing unsafe WORKDIR: $WORKDIR" >&2
+    exit 24
+    ;;
+esac
+
 case "$ARCH" in
   aarch64|arm|i686|x86_64) ;;
   *) echo "Arquitectura no soportada: $ARCH" >&2; exit 2 ;;

@@ -91,7 +91,9 @@ class MissionForegroundService : Service() {
     }
 
     override fun onDestroy() {
-        cancelCurrent("Servicio detenido")
+        if (future?.isDone == false) {
+            cancelCurrent("Servicio detenido")
+        }
         executor.shutdownNow()
         releaseWakeLock()
         super.onDestroy()

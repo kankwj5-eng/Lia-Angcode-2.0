@@ -66,7 +66,7 @@ object RootBridgeManager {
 
     fun ready(context: Context): Boolean = status(context).root
 
-    internal fun run(command: String): ToolResponse {
+    private fun run(command: String): ToolResponse {
         val shell = Shell.getCachedShell()
             ?: return ToolResponse(false, "Root no preparado; habilítalo en Ajustes")
         if (!shell.isRoot) {

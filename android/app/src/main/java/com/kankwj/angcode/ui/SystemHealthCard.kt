@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.HealthAndSafety
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
@@ -62,6 +63,8 @@ fun SystemHealthCard() {
     var refresh by remember { mutableIntStateOf(0) }
     var diagnosticsMessage by remember { mutableStateOf<String?>(null) }
     var pendingBundle by remember { mutableStateOf<java.io.File?>(null) }
+    var selfTestRunning by remember { mutableStateOf(false) }
+    var selfTestResult by remember { mutableStateOf<RuntimeSelfTestResult?>(null) }
 
     val exportDiagnostics = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
@@ -239,6 +242,68 @@ fun SystemHealthCard() {
                     Icon(Icons.Rounded.Refresh, null)
                     Spacer(Modifier.width(4.dp))
                     Text("Revisar", fontSize = 9.sp)
+                }
+            }
+
+            OutlinedButton(
+                enabled = !selfTestRunning,
+                onClick = {
+                    selfTestRunning = true
+                    selfTestResult = null
+                    scope.launch {
+                        val result = runCatching {
+                            withContext(Dispatchers.IO) {
+                                RuntimeSelfTest(context).run()
+                            }
+                        }
+                        selfTestResult = result.getOrNull()
+                        diagnosticsMessage = result.exceptionOrNull()?.let {
+                            "✕ Self-test: " +
+                                (it.message ?: "fallo desconocido")
+                        }
+                        selfTestRunning = false
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Rounded.PlayArrow, null)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (selfTestRunning) "Probando…" else "Ejecutar self-test",
+                    fontSize = 10.sp
+                )
+            }
+
+            selfTestResult?.let { test ->
+                Surface(
+                    color = Graphite,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            if (test.passed) {
+                                "✓ Tool Broker funcional"
+                            } else {
+                                "✕ Self-test incompleto"
+                            },
+                            color = if (test.passed) Success else WarningColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                        test.steps.forEach { step ->
+                            Text(
+                                (if (step.ok) "✓ " else "✕ ") +
+                                    step.name + " · " + step.detail.take(140),
+                                color = Muted,
+                                fontSize = 8.sp,
+                                lineHeight = 11.sp
+                            )
+                        }
+                    }
                 }
             }
 

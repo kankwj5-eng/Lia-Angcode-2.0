@@ -5,9 +5,13 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.sse.SSE
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
+import io.modelcontextprotocol.kotlin.sdk.types.AudioContent
+import io.modelcontextprotocol.kotlin.sdk.types.BlobResourceContents
+import io.modelcontextprotocol.kotlin.sdk.types.EmbeddedResource
 import io.modelcontextprotocol.kotlin.sdk.types.ImageContent
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.TextResourceContents
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -88,26 +92,73 @@ class OfficialMcpHttpClient(
             arguments = arguments.mapValues { (_, value) -> value.coerceMcpValue() }
         )
 
-        val text = result.content
+        val textParts = mutableListOf<String>()
+        result.content
             .filterIsInstance<TextContent>()
-            .joinToString("\n") { it.text }
+            .mapTo(textParts) { it.text }
+
+        result.content
+            .filterIsInstance<EmbeddedResource>()
+            .mapNotNull { embedded ->
+                (embedded.resource as? TextResourceContents)?.text
+            }
+            .filter(String::isNotBlank)
+            .forEach(textParts::add)
+
+        val binaries = buildList {
+            result.content
+                .filterIsInstance<ImageContent>()
+                .forEach { image ->
+                    add(
+                        McpBinaryContent(
+                            dataBase64 = image.data,
+                            mimeType = image.mimeType
+                        )
+                    )
+                }
+
+            result.content
+                .filterIsInstance<AudioContent>()
+                .forEach { audio ->
+                    add(
+                        McpBinaryContent(
+                            dataBase64 = audio.data,
+                            mimeType = audio.mimeType
+                        )
+                    )
+                }
+
+            result.content
+                .filterIsInstance<EmbeddedResource>()
+                .forEach { embedded ->
+                    val blob = embedded.resource as? BlobResourceContents
+                        ?: return@forEach
+                    add(
+                        McpBinaryContent(
+                            dataBase64 = blob.blob,
+                            mimeType = blob.mimeType ?: "application/octet-stream",
+                            sourceUri = blob.uri
+                        )
+                    )
+                }
+        }
+
+        val text = textParts
+            .filter(String::isNotBlank)
+            .joinToString("\n")
             .ifBlank { result.structuredContent?.toString().orEmpty() }
 
-        val images = result.content
-            .filterIsInstance<ImageContent>()
-            .map { image ->
-                McpBinaryContent(
-                    dataBase64 = image.data,
-                    mimeType = image.mimeType
-                )
-            }
+        val images = binaries.filter {
+            it.mimeType.startsWith("image/", ignoreCase = true)
+        }
 
         McpCallResult(
             text = text,
             isError = result.isError == true,
             imageCount = images.size,
             rawJson = result.toString(),
-            images = images
+            images = images,
+            binaryContents = binaries
         )
     }
 

@@ -44,17 +44,15 @@ object AgentPermissionProfiles {
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.WORKSPACE_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
-                ToolPermission.GITHUB_READ,
-                ToolPermission.GITHUB_WRITE,
-                ToolPermission.SSH_REMOTE
+                ToolPermission.NETWORK,
+                ToolPermission.GITHUB_READ
             )
             AgentRole.RESEARCHER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.NETWORK,
                 ToolPermission.MCP_EXTERNAL,
-                ToolPermission.GITHUB_READ,
-                ToolPermission.SSH_REMOTE
+                ToolPermission.GITHUB_READ
             )
             AgentRole.TESTER -> setOf(
                 ToolPermission.WORKSPACE_READ,
@@ -67,27 +65,61 @@ object AgentPermissionProfiles {
                 ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.WORKSPACE_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
-                ToolPermission.SHIZUKU_PRIVILEGED,
-                ToolPermission.ROOT_PRIVILEGED,
-                ToolPermission.ADB_REMOTE,
-                ToolPermission.SSH_REMOTE,
-                ToolPermission.GITHUB_WRITE
+                ToolPermission.ANDROID_BRIDGE
             )
             AgentRole.BROWSER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.NETWORK,
                 ToolPermission.PRIVATE_NETWORK,
-                ToolPermission.MCP_EXTERNAL,
-                ToolPermission.ANDROID_UI_ACTION
+                ToolPermission.MCP_EXTERNAL
+            )
+        }
+
+    fun elevatedForRole(role: AgentRole): Set<ToolPermission> =
+        when (role) {
+            AgentRole.DIRECTOR -> emptySet()
+            AgentRole.CODER -> setOf(
+                ToolPermission.GITHUB_WRITE,
+                ToolPermission.SSH_REMOTE
+            )
+            AgentRole.RESEARCHER -> setOf(
+                ToolPermission.SSH_REMOTE
+            )
+            AgentRole.TESTER -> setOf(
+                ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ROOT_PRIVILEGED,
+                ToolPermission.ADB_REMOTE,
+                ToolPermission.PRIVATE_NETWORK,
+                ToolPermission.SSH_REMOTE,
+                ToolPermission.CLIPBOARD_READ
+            )
+            AgentRole.BUILDER -> setOf(
+                ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ROOT_PRIVILEGED,
+                ToolPermission.ADB_REMOTE,
+                ToolPermission.PRIVATE_NETWORK,
+                ToolPermission.SSH_REMOTE,
+                ToolPermission.GITHUB_WRITE
+            )
+            AgentRole.BROWSER -> setOf(
+                ToolPermission.ANDROID_UI_ACTION,
+                ToolPermission.CLIPBOARD_READ,
+                ToolPermission.CLIPBOARD_WRITE
             )
         }
 
     fun constrainedTo(
         role: AgentRole,
-        parentPermissions: Set<ToolPermission>
-    ): Set<ToolPermission> =
-        forRole(role).intersect(parentPermissions)
+        parentPermissions: Set<ToolPermission>,
+        approvedElevatedPermissions: Set<ToolPermission> = emptySet()
+    ): Set<ToolPermission> {
+        val base = forRole(role).intersect(parentPermissions)
+        val elevated = elevatedForRole(role)
+            .intersect(parentPermissions)
+            .intersect(approvedElevatedPermissions)
+        return base + elevated
+    }
 }
 
 class AgentCellProvisioner(
@@ -150,13 +182,15 @@ class AgentCellProvisioner(
 
         val childPermissions = AgentPermissionProfiles.constrainedTo(
             request.role,
-            parentContext.grantedPermissions
+            parentContext.grantedPermissions,
+            parentContext.approvedElevatedPermissions
         )
 
         val childContext = ToolContext(
             workspace = File(worktreePath),
             grantedPermissions = childPermissions,
-            executables = parentContext.executables
+            executables = parentContext.executables,
+            approvedElevatedPermissions = parentContext.approvedElevatedPermissions
         )
 
         val cell = AgentCell(

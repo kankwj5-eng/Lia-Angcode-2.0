@@ -37,4 +37,33 @@ class AgentPermissionProfilesTest {
         assertTrue(ToolPermission.ANDROID_BRIDGE in AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, all))
         assertFalse(ToolPermission.ROOT_PRIVILEGED in AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, all))
     }
+    @Test
+    fun explicitlyApprovedElevatedPermissionCanReachBuilder() {
+        val parent = setOf(
+            ToolPermission.WORKSPACE_READ,
+            ToolPermission.WORKSPACE_WRITE,
+            ToolPermission.PROCESS_EXECUTE,
+            ToolPermission.ANDROID_BRIDGE,
+            ToolPermission.SHIZUKU_PRIVILEGED,
+            ToolPermission.ROOT_PRIVILEGED,
+            ToolPermission.ADB_REMOTE,
+            ToolPermission.PRIVATE_NETWORK
+        )
+        val approved = setOf(
+            ToolPermission.SHIZUKU_PRIVILEGED,
+            ToolPermission.ADB_REMOTE,
+            ToolPermission.PRIVATE_NETWORK
+        )
+
+        val permissions = AgentPermissionProfiles.constrainedTo(
+            AgentRole.BUILDER,
+            parent,
+            approved
+        )
+
+        assertTrue(ToolPermission.SHIZUKU_PRIVILEGED in permissions)
+        assertTrue(ToolPermission.ADB_REMOTE in permissions)
+        assertTrue(ToolPermission.PRIVATE_NETWORK in permissions)
+        assertFalse(ToolPermission.ROOT_PRIVILEGED in permissions)
+    }
 }

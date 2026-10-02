@@ -290,7 +290,8 @@ class LocalMissionExecutor(
         val toolContext = ToolContext(
             workspace = workspace,
             grantedPermissions = permissions,
-            executables = executables
+            executables = executables,
+            approvedElevatedPermissions = approved
         )
 
         broker.execute(

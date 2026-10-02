@@ -415,7 +415,8 @@ class AdaptiveMissionCoordinator(
     ): MissionTaskResult {
         val permissions = AgentPermissionProfiles.constrainedTo(
             task.role,
-            rootContext.grantedPermissions
+            rootContext.grantedPermissions,
+            rootContext.approvedElevatedPermissions
         )
 
         val context = rootContext.copy(

@@ -31,7 +31,8 @@ enum class ToolPermission {
 data class ToolContext(
     val workspace: File,
     val grantedPermissions: Set<ToolPermission>,
-    val executables: Map<String, String> = emptyMap()
+    val executables: Map<String, String> = emptyMap(),
+    val approvedElevatedPermissions: Set<ToolPermission> = emptySet()
 )
 
 data class ToolCall(

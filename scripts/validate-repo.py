@@ -156,6 +156,25 @@ def validate_toolpacks() -> tuple[int, int]:
                 + ", ".join(missing_tools)
             )
 
+        produces_artifacts = any(
+            tool_id.startswith("artifact.")
+            or tool_id == "browser.screenshot"
+            or tool_id in {"media.convert", "image.convert"}
+            for tool_id in tools
+        )
+        if produces_artifacts and "ARTIFACT_WRITE" not in declared_permissions:
+            fail(
+                f"Tool Pack {pack_id} produce artifacts pero no declara ARTIFACT_WRITE"
+            )
+
+        runtime = data.get("runtime", "ANDROID_NATIVE")
+        if runtime not in {"ANDROID_NATIVE", "PROOT"}:
+            fail(f"Tool Pack {pack_id} usa runtime desconocido: {runtime}")
+
+        architectures = data.get("architectures", [])
+        if not isinstance(architectures, list):
+            fail(f"Tool Pack {pack_id} architectures debe ser una lista")
+
         tool_count += len(tools)
 
     return len(pack_ids), tool_count

@@ -5,6 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.app.ActivityManager
 import android.os.BatteryManager
 import android.os.Build
@@ -150,12 +154,84 @@ class AndroidThermalTool(
         }
 }
 
+class AndroidNetworkTool(
+    private val appContext: Context
+) : AgentTool {
+    override val id = "android.network"
+    override val description = "Consulta conectividad activa y transportes disponibles sin leer tráfico."
+    override val requiredPermissions = setOf(ToolPermission.ANDROID_BRIDGE)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val manager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = manager.activeNetwork
+            ?: return ToolResponse(true, "connected=false", mapOf("connected" to "false"))
+        val caps = manager.getNetworkCapabilities(network)
+            ?: return ToolResponse(true, "connected=false", mapOf("connected" to "false"))
+
+        val transports = buildList {
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) add("wifi")
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) add("cellular")
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) add("ethernet")
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) add("vpn")
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)) add("bluetooth")
+        }
+
+        val validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        val metered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+
+        return ToolResponse(
+            true,
+            listOf(
+                "connected=true",
+                "validated=" + validated,
+                "metered=" + metered,
+                "transports=" + transports.joinToString(",")
+            ).joinToString("\n"),
+            mapOf(
+                "connected" to "true",
+                "validated" to validated.toString(),
+                "metered" to metered.toString(),
+                "transports" to transports.joinToString(",")
+            )
+        )
+    }
+}
+
+class AndroidSensorsListTool(
+    private val appContext: Context
+) : AgentTool {
+    override val id = "android.sensors.list"
+    override val description = "Lista sensores físicos disponibles en el dispositivo."
+    override val requiredPermissions = setOf(ToolPermission.ANDROID_BRIDGE)
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val manager = appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val sensors = manager.getSensorList(Sensor.TYPE_ALL)
+            .sortedWith(compareBy<Sensor>({ it.type }, { it.name.lowercase() }))
+
+        val output = sensors.joinToString("\n") { sensor ->
+            sensor.type.toString() + "\t" +
+                sensor.name + "\t" +
+                sensor.vendor + "\tversion=" + sensor.version +
+                "\tpowerMa=" + sensor.power
+        }
+
+        return ToolResponse(
+            true,
+            output,
+            mapOf("count" to sensors.size.toString())
+        )
+    }
+}
+
 fun ToolBroker.registerAndroidTools(context: Context): ToolBroker = apply {
     val app = context.applicationContext
     register(AndroidBatteryTool(app))
     register(AndroidMemoryTool(app))
     register(AndroidStorageTool(app))
     register(AndroidThermalTool(app))
+    register(AndroidNetworkTool(app))
+    register(AndroidSensorsListTool(app))
     register(ClipboardReadTool(app))
     register(ClipboardWriteTool(app))
     register(AndroidOpenUrlTool(app))

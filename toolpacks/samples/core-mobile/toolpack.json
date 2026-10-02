@@ -22,7 +22,7 @@
     "checkpoint.list",
     "checkpoint.restore",
     "http.get",
-    "android.device.info",
+    "android.device_info",
     "android.battery",
     "android.clipboard.read",
     "android.clipboard.write"

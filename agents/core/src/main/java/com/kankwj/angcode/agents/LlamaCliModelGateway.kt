@@ -9,6 +9,9 @@ class LlamaCliModelGateway(
     private val model: File,
     private val runner: CommandRunner = CommandRunner(),
     private val temperature: Double = 0.2,
+    private val contextSize: Int = 4_096,
+    private val threads: Int = 4,
+    private val batchSize: Int = 256,
     private val timeoutMillis: Long = 5 * 60_000L
 ) : ModelGateway {
     init {
@@ -24,7 +27,10 @@ class LlamaCliModelGateway(
                     "-m", model.absolutePath,
                     "-p", ModelToolProtocol.prompt(request),
                     "-n", request.maxOutputTokens.coerceIn(32, 4096).toString(),
-                    "--temp", temperature.coerceIn(0.0, 2.0).toString()
+                    "--temp", temperature.coerceIn(0.0, 2.0).toString(),
+                    "-c", contextSize.coerceIn(512, 32_768).toString(),
+                    "-t", threads.coerceIn(1, 16).toString(),
+                    "-b", batchSize.coerceIn(32, 2_048).toString()
                 ),
                 workingDirectory = model.parentFile,
                 timeoutMillis = timeoutMillis,

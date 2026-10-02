@@ -2,8 +2,23 @@
   "id": "web-node",
   "name": "Web + Node",
   "version": "0.1.0",
-  "description": "Node.js, paquetes JS/TS y navegador agentico.",
-  "packages": ["nodejs-lts", "git", "ripgrep"],
-  "tools": ["node.run", "npm.run", "git.status", "git.diff", "code.search", "browser.lightpanda.*"],
-  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE", "NETWORK"]
+  "description": "Node.js y paquetes JS/TS para proyectos web locales. El navegador agentico se activa con el pack Lightpanda Browser.",
+  "packages": [
+    "nodejs-lts",
+    "git",
+    "ripgrep"
+  ],
+  "tools": [
+    "node.run",
+    "npm.run",
+    "git.status",
+    "git.diff",
+    "code.search"
+  ],
+  "permissions": [
+    "WORKSPACE_READ",
+    "WORKSPACE_WRITE",
+    "PROCESS_EXECUTE",
+    "NETWORK"
+  ]
 }

@@ -25,9 +25,14 @@ on:
           - minimal
           - dev
           - full
+      publish:
+        description: Publish verified files as a public GitHub Release
+        required: true
+        default: false
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   runtime:
@@ -65,3 +70,15 @@ jobs:
             .angcode-runtime-build/out/runtime-manifest-*.txt
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish verified runtime release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd .angcode-runtime-build/out
+          sha256sum -c *.sha256
+          TAG="runtime-${ANGC_PROFILE}-${ANGC_ARCH}-${GITHUB_RUN_NUMBER}"
+          TITLE="AngCode Runtime ${ANGC_PROFILE} ${ANGC_ARCH} #${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG"             --repo "${GITHUB_REPOSITORY}"             --title "$TITLE"             --notes "Runtime AngCode verificado. Package: com.kankwj.angcode. Build: ${GITHUB_SHA}."             ./*.zip ./*.sha256 ./runtime-manifest-*.txt

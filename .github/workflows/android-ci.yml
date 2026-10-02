@@ -28,7 +28,7 @@ jobs:
           gradle-version: "9.6.0"
 
       - name: Unit tests
-        run: gradle -p android :runtime-core:testDebugUnitTest :agent-core:testDebugUnitTest --stacktrace
+        run: gradle -p android :runtime-core:testDebugUnitTest :agent-core:testDebugUnitTest :connector-core:testDebugUnitTest --stacktrace
 
       - name: Build debug APK
         run: gradle -p android :app:assembleDebug --stacktrace

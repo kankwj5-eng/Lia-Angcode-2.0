@@ -39,4 +39,14 @@ class MissionAnalyzerTest {
         assertTrue(MissionCapability.BROWSER_AUTOMATION in analysis.capabilities)
         assertTrue("lightpanda-browser" in analysis.recommendedToolPacks)
     }
+    @Test
+    fun gradleJvmWithoutManifestIsNotAndroid() {
+        val root = createTempDirectory("angcode-gradle-jvm-").toFile()
+        File(root, "settings.gradle.kts").writeText("rootProject.name = \"JvmOnly\"")
+        File(root, "build.gradle.kts").writeText("plugins { kotlin(\"jvm\") }")
+
+        val profile = ProjectProfiler().profile(root)
+
+        assertTrue(profile.kind != ProjectKind.ANDROID)
+    }
 }

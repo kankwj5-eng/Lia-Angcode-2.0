@@ -4,6 +4,7 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 
 class AutomationStore(context: Context) {
     private val root = File(context.applicationContext.filesDir, "automations").apply { mkdirs() }
@@ -100,8 +101,10 @@ class AutomationStore(context: Context) {
         items.forEach { array.put(encode(it)) }
 
         val temp = File(root, "automations.json.tmp")
-        temp.writeText(array.toString(2))
-        temp.outputStream().fd.sync()
+        FileOutputStream(temp).use { output ->
+            output.write(array.toString(2).toByteArray(Charsets.UTF_8))
+            output.fd.sync()
+        }
 
         if (backup.exists()) backup.delete()
         if (file.exists() && !file.renameTo(backup)) {

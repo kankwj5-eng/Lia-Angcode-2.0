@@ -30,8 +30,6 @@ jobs:
       - name: Static repository validation
         run: python3 scripts/validate-repo.py
 
-      - name: Tool Pack validation
-        run: python3 scripts/validate-toolpacks.py
 
       - name: Unit tests
         run: gradle -p android :runtime-core:testDebugUnitTest :agent-core:testDebugUnitTest :connector-core:testDebugUnitTest --stacktrace

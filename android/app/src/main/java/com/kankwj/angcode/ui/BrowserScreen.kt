@@ -98,6 +98,12 @@ fun BrowserScreen() {
         }
 
         BrowserAgentControl()
+        LocalPreviewCard(
+            onOpen = { url ->
+                address = url
+                webViewRef?.loadUrl(url)
+            }
+        )
 
         AndroidView(
             modifier = Modifier.fillMaxSize(),

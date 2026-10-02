@@ -438,6 +438,7 @@ private fun SettingsScreen() {
         subtitle = "Runtime, conectores y niveles de acceso del dispositivo.",
         icon = Icons.Rounded.Settings
     ) {
+        SystemHealthCard()
         RuntimeSetupCard()
         ModelSetupCard()
         GitHubSetupCard()

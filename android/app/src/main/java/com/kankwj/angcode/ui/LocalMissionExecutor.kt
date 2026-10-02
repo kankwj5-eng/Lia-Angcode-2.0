@@ -199,6 +199,7 @@ class LocalMissionExecutor(
         val permissions = mutableSetOf(
             ToolPermission.WORKSPACE_READ,
             ToolPermission.WORKSPACE_WRITE,
+            ToolPermission.ARTIFACT_WRITE,
             ToolPermission.PROCESS_EXECUTE,
             ToolPermission.NETWORK,
             ToolPermission.ANDROID_BRIDGE,

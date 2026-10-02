@@ -1,0 +1,81 @@
+name: Publish AngCode Dev APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/android-release-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Run unit tests
+        run: gradle -p android :runtime-core:testDebugUnitTest :agent-core:testDebugUnitTest --stacktrace
+
+      - name: Build development APK
+        run: gradle -p android :app:assembleDebug --stacktrace
+
+      - name: Prepare verified release files
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/AngCode-dev.apk
+          (
+            cd release
+            sha256sum AngCode-dev.apk > AngCode-dev.apk.sha256
+          )
+          cat > release/build-manifest.txt <<EOF
+          project=AngCode
+          package=com.kankwj.angcode
+          channel=development
+          commit=${GITHUB_SHA}
+          workflow_run=${GITHUB_RUN_NUMBER}
+          compile_sdk=36
+          target_sdk=28
+          note=Development/sideload build; runtime execution architecture intentionally targets API 28.
+          EOF
+          (
+            cd release
+            sha256sum -c AngCode-dev.apk.sha256
+          )
+
+      - name: Upload verified APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: angcode-dev-apk
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish development release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="angcode-dev-${GITHUB_RUN_NUMBER}"
+          TITLE="AngCode Development #${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG"             --repo "${GITHUB_REPOSITORY}"             --title "$TITLE"             --notes "Development sideload build of AngCode. APK and SHA-256 are generated from commit ${GITHUB_SHA}. This is not yet the final production-signed release."             release/AngCode-dev.apk             release/AngCode-dev.apk.sha256             release/build-manifest.txt

@@ -4,37 +4,33 @@ import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class ToolAuditLogTest {
     @Test
-    fun redactsSensitiveToolArguments() {
+    fun redactsSensitiveArguments() {
         val root = createTempDirectory("angcode-audit-").toFile()
-        val broker = ToolBroker().apply {
-            register(object : AgentTool {
-                override val id = "fake"
-                override val description = "fake"
-                override val requiredPermissions = emptySet<ToolPermission>()
-                override fun invoke(call: ToolCall, context: ToolContext) =
-                    ToolResponse(true, "ok")
-            })
-        }
-
-        broker.execute(
-            ToolCall(
+        ToolAuditLog.record(
+            workspace = root,
+            call = ToolCall(
                 "fake",
                 mapOf(
-                    "host" to "example.com",
-                    "token" to "super-secret",
-                    "content" to "private-file-body"
+                    "token" to "super-secret-token",
+                    "header" to "Authorization: Bearer abc",
+                    "path" to "src/Main.kt"
                 )
             ),
-            ToolContext(root, emptySet())
+            requiredPermissions = emptySet(),
+            grantedPermissions = emptySet(),
+            response = ToolResponse(true, "secret output not logged"),
+            durationMs = 4
         )
 
-        val audit = ToolAuditLog.file(root).readText()
-        assertTrue(audit.contains("example.com"))
-        assertTrue(audit.contains("<redacted>"))
-        assertFalse(audit.contains("super-secret"))
-        assertFalse(audit.contains("private-file-body"))
+        val line = ToolAuditLog.file(root).readText()
+        assertFalse(line.contains("super-secret-token"))
+        assertFalse(line.contains("Bearer abc"))
+        assertFalse(line.contains("secret output not logged"))
+        assertTrue(line.contains("<redacted>"))
+        assertTrue(line.contains("src/Main.kt"))
     }
 }

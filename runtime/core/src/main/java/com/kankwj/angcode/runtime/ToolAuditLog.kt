@@ -12,8 +12,9 @@ object ToolAuditLog {
     private val lock = Any()
 
     private val sensitiveKeys = Regex(
-        "(?i)(token|password|passwd|secret|authorization|cookie|api[_-]?key|" +
-            "private[_-]?key|identity|content|text|code|prompt|stdin|args)"
+        "(?i)(token|password|passwd|passphrase|secret|authorization|bearer|credential|" +
+            "cookie|header|api[_-]?key|private[_-]?key|identity|content|text|code|" +
+            "prompt|stdin|args)"
     )
 
     fun record(

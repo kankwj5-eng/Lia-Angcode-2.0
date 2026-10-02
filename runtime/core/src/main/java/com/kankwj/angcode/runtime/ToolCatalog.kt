@@ -54,6 +54,8 @@ object ToolCatalog {
         ToolCapability("package.install", ToolFamily.SANDBOX, "Instalar paquetes aprobados", CapabilityStatus.BUILT_IN),
 
         ToolCapability("http.get", ToolFamily.NETWORK, "HTTP(S) limitado por política", CapabilityStatus.BUILT_IN),
+        ToolCapability("preview.probe", ToolFamily.NETWORK, "Inspeccionar preview localhost", CapabilityStatus.BUILT_IN),
+        ToolCapability("preview.scan", ToolFamily.NETWORK, "Detectar servidores de desarrollo localhost", CapabilityStatus.BUILT_IN),
 
         ToolCapability("archive.zip", ToolFamily.ARCHIVE, "Comprimir workspace", CapabilityStatus.BUILT_IN),
         ToolCapability("archive.unzip", ToolFamily.ARCHIVE, "Extraer ZIP bloqueando Zip Slip", CapabilityStatus.BUILT_IN),

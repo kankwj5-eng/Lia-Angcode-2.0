@@ -40,6 +40,8 @@ object ToolCatalog {
 
         ToolCapability("process.exec", ToolFamily.PROCESS, "Ejecutar proceso corto", CapabilityStatus.BUILT_IN),
         ToolCapability("process.start", ToolFamily.PROCESS, "Iniciar proceso administrado", CapabilityStatus.BUILT_IN),
+        ToolCapability("process.write", ToolFamily.PROCESS, "Escribir stdin de proceso administrado", CapabilityStatus.BUILT_IN),
+        ToolCapability("process.close_input", ToolFamily.PROCESS, "Cerrar stdin de proceso administrado", CapabilityStatus.BUILT_IN),
         ToolCapability("process.logs", ToolFamily.PROCESS, "Leer logs de un proceso", CapabilityStatus.BUILT_IN),
         ToolCapability("process.list", ToolFamily.PROCESS, "Listar procesos administrados", CapabilityStatus.BUILT_IN),
         ToolCapability("process.stop", ToolFamily.PROCESS, "Detener proceso administrado", CapabilityStatus.BUILT_IN),
@@ -65,6 +67,7 @@ object ToolCatalog {
         ToolCapability("checkpoint.restore", ToolFamily.ARCHIVE, "Restaurar checkpoint", CapabilityStatus.BUILT_IN),
 
         ToolCapability("git.*", ToolFamily.VERSION_CONTROL, "Git local estructurado", CapabilityStatus.BUILT_IN, "git/git"),
+        ToolCapability("code.symbols", ToolFamily.CODE_INTELLIGENCE, "Outline ligero de símbolos", CapabilityStatus.BUILT_IN),
         ToolCapability("code.ast.parse", ToolFamily.CODE_INTELLIGENCE, "AST con Tree-sitter cuando hay gramática", CapabilityStatus.BUILT_IN, "tree-sitter/tree-sitter"),
         ToolCapability("python.run", ToolFamily.CODE_INTELLIGENCE, "Ejecutar script/código Python", CapabilityStatus.BUILT_IN),
         ToolCapability("python.test", ToolFamily.CODE_INTELLIGENCE, "Ejecutar pytest", CapabilityStatus.BUILT_IN),

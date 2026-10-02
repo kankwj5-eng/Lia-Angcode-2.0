@@ -93,11 +93,21 @@ class OfficialMcpHttpClient(
             .joinToString("\n") { it.text }
             .ifBlank { result.structuredContent?.toString().orEmpty() }
 
+        val images = result.content
+            .filterIsInstance<ImageContent>()
+            .map { image ->
+                McpBinaryContent(
+                    dataBase64 = image.data,
+                    mimeType = image.mimeType
+                )
+            }
+
         McpCallResult(
             text = text,
             isError = result.isError == true,
-            imageCount = result.content.count { it is ImageContent },
-            rawJson = result.toString()
+            imageCount = images.size,
+            rawJson = result.toString(),
+            images = images
         )
     }
 

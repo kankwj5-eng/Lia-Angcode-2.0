@@ -43,27 +43,37 @@ object AgentPermissionProfiles {
             AgentRole.CODER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.WORKSPACE_WRITE,
-                ToolPermission.PROCESS_EXECUTE
+                ToolPermission.PROCESS_EXECUTE,
+                ToolPermission.GITHUB_READ,
+                ToolPermission.SSH_REMOTE
             )
             AgentRole.RESEARCHER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.NETWORK,
-                ToolPermission.MCP_EXTERNAL
+                ToolPermission.MCP_EXTERNAL,
+                ToolPermission.GITHUB_READ,
+                ToolPermission.SSH_REMOTE
             )
             AgentRole.TESTER -> setOf(
                 ToolPermission.WORKSPACE_READ,
-                ToolPermission.PROCESS_EXECUTE
+                ToolPermission.PROCESS_EXECUTE,
+                ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ADB_REMOTE
             )
             AgentRole.BUILDER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.WORKSPACE_WRITE,
-                ToolPermission.PROCESS_EXECUTE
+                ToolPermission.PROCESS_EXECUTE,
+                ToolPermission.SHIZUKU_PRIVILEGED,
+                ToolPermission.ADB_REMOTE,
+                ToolPermission.SSH_REMOTE
             )
             AgentRole.BROWSER -> setOf(
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.NETWORK,
                 ToolPermission.PRIVATE_NETWORK,
-                ToolPermission.MCP_EXTERNAL
+                ToolPermission.MCP_EXTERNAL,
+                ToolPermission.ANDROID_UI_ACTION
             )
         }
 

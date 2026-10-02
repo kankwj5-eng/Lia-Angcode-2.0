@@ -117,6 +117,9 @@ object ToolCatalog {
         ToolCapability("github.issues", ToolFamily.CONNECTOR, "Issues GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
         ToolCapability("github.pulls", ToolFamily.CONNECTOR, "Pull requests GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
         ToolCapability("github.branches", ToolFamily.CONNECTOR, "Ramas GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
-        ToolCapability("github.actions", ToolFamily.CONNECTOR, "GitHub Actions recientes", CapabilityStatus.BUILT_IN, "github/rest-api-description")
+        ToolCapability("github.actions", ToolFamily.CONNECTOR, "GitHub Actions recientes", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.branch.create", ToolFamily.CONNECTOR, "Crear rama GitHub desde SHA", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.file.put", ToolFamily.CONNECTOR, "Crear/actualizar archivo GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.pr.create", ToolFamily.CONNECTOR, "Crear pull request GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description")
     )
 }

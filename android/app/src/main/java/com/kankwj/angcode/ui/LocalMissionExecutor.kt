@@ -10,6 +10,8 @@ import android.os.PowerManager
 import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
 import com.kankwj.angcode.agents.AgentRunConfig
 import com.kankwj.angcode.agents.LlamaCliModelGateway
+import com.kankwj.angcode.agents.LlamaServerManager
+import com.kankwj.angcode.agents.LlamaServerModelGateway
 import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCapability
 import com.kankwj.angcode.agents.MissionCoordinatorResult
@@ -58,10 +60,11 @@ class LocalMissionExecutor(
         val model = modelStore.active()
             ?: return LocalMissionReadiness(false, null, "Selecciona un modelo GGUF en Ajustes")
         val executables = ExecutableDiscovery.forApp(appContext).asMap()
-        if ("llama-cli" !in executables) {
+        if ("llama-server" !in executables && "llama-cli" !in executables) {
             return LocalMissionReadiness(false, model.name, "Instala el Tool Pack Local LLM")
         }
-        return LocalMissionReadiness(true, model.name, "Listo")
+        val backend = if ("llama-server" in executables) "servidor persistente" else "fallback CLI"
+        return LocalMissionReadiness(true, model.name, "Listo · " + backend)
     }
 
     fun run(
@@ -72,8 +75,11 @@ class LocalMissionExecutor(
             ?: error("No hay modelo GGUF activo")
 
         val executables = ExecutableDiscovery.forApp(appContext).asMap()
-        val llamaPath = executables["llama-cli"]
-            ?: error("llama-cli no está instalado")
+        val llamaServerPath = executables["llama-server"]
+        val llamaCliPath = executables["llama-cli"]
+        if (llamaServerPath == null && llamaCliPath == null) {
+            error("llama-server/llama-cli no están instalados")
+        }
 
         val workspace = projectStore.resolveActiveOrScratch()
         val broker = ToolBroker()
@@ -151,10 +157,26 @@ class LocalMissionExecutor(
             toolContext
         )
 
-        val gateway = LlamaCliModelGateway(
-            executable = File(llamaPath),
-            model = File(model.path)
-        )
+        val gateway = if (llamaServerPath != null) {
+            runCatching {
+                val handle = LlamaServerManager.ensureRunning(
+                    executable = File(llamaServerPath),
+                    model = File(model.path)
+                )
+                LlamaServerModelGateway(handle)
+            }.getOrElse { error ->
+                val fallback = llamaCliPath ?: throw error
+                LlamaCliModelGateway(
+                    executable = File(fallback),
+                    model = File(model.path)
+                )
+            }
+        } else {
+            LlamaCliModelGateway(
+                executable = File(llamaCliPath!!),
+                model = File(model.path)
+            )
+        }
         val coordinator = AdaptiveMissionCoordinator(
             model = gateway,
             broker = broker

@@ -53,9 +53,14 @@ class ProjectProfiler {
         val signals = mutableListOf<String>()
 
         val kind = when {
-            has("settings.gradle") || has("settings.gradle.kts") ||
-                has("build.gradle") || has("build.gradle.kts") &&
-                workspace.walkTopDown().maxDepth(3).any { it.name == "AndroidManifest.xml" } -> {
+            (
+                has("settings.gradle") ||
+                    has("settings.gradle.kts") ||
+                    has("build.gradle") ||
+                    has("build.gradle.kts")
+            ) && workspace.walkTopDown()
+                .maxDepth(5)
+                .any { it.name == "AndroidManifest.xml" } -> {
                 signals += "Gradle/Android"
                 ProjectKind.ANDROID
             }

@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":runtime-core"))
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("com.github.topjohnwu.libsu:core:6.0.0")
     implementation("io.modelcontextprotocol:kotlin-sdk-client:0.15.0")
     implementation("io.ktor:ktor-client-cio:3.5.1")
     testImplementation("junit:junit:4.13.2")

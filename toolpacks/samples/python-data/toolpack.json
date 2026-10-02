@@ -3,7 +3,26 @@
   "name": "Python + Data",
   "version": "0.1.0",
   "description": "Python, pruebas y utilidades de datos para proyectos locales.",
-  "packages": ["python", "python-pip", "git", "ripgrep", "jq", "sqlite"],
-  "tools": ["python.run", "python.test", "code.search", "json.query", "sqlite.query", "artifact.zip"],
-  "permissions": ["WORKSPACE_READ", "WORKSPACE_WRITE", "PROCESS_EXECUTE"]
+  "packages": [
+    "python",
+    "python-pip",
+    "git",
+    "ripgrep",
+    "jq",
+    "sqlite"
+  ],
+  "tools": [
+    "python.run",
+    "python.test",
+    "code.search",
+    "json.query",
+    "sqlite.query",
+    "artifact.zip"
+  ],
+  "permissions": [
+    "WORKSPACE_READ",
+    "WORKSPACE_WRITE",
+    "PROCESS_EXECUTE",
+    "ARTIFACT_WRITE"
+  ]
 }

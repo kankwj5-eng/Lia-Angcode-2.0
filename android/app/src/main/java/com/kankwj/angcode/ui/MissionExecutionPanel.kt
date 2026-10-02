@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,9 @@ import com.kankwj.angcode.agents.AgentCancellationToken
 import com.kankwj.angcode.agents.LlamaServerManager
 import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCoordinatorResult
+import com.kankwj.angcode.mission.BackgroundMissionSnapshot
+import com.kankwj.angcode.mission.BackgroundMissionState
+import com.kankwj.angcode.mission.MissionForegroundService
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.Graphite
 import com.kankwj.angcode.ui.theme.InkWhite
@@ -43,6 +47,7 @@ import com.kankwj.angcode.ui.theme.Panel
 import com.kankwj.angcode.ui.theme.PanelRaised
 import com.kankwj.angcode.ui.theme.Success
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -59,6 +64,16 @@ fun MissionExecutionPanel(
     var result by remember { mutableStateOf<MissionCoordinatorResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var readiness by remember { mutableStateOf(executor.readiness()) }
+    var backgroundState by remember {
+        mutableStateOf(BackgroundMissionState.snapshot())
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            backgroundState = BackgroundMissionState.snapshot()
+            delay(1_000)
+        }
+    }
 
     Surface(
         color = Panel,
@@ -145,6 +160,69 @@ fun MissionExecutionPanel(
                     if (running) "Trabajando…" else "Ejecutar misión local",
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            Button(
+                enabled = readiness.ready && !running && !backgroundState.running,
+                onClick = {
+                    MissionForegroundService.start(context, analysis.mission)
+                    backgroundState = BackgroundMissionSnapshot(
+                        running = true,
+                        mission = analysis.mission,
+                        detail = "Iniciando misión en segundo plano",
+                        startedAtMillis = System.currentTimeMillis()
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PanelRaised,
+                    contentColor = InkWhite
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Rounded.Bolt, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Ejecutar en segundo plano", fontWeight = FontWeight.Bold)
+            }
+
+            if (backgroundState.running) {
+                Surface(
+                    color = Graphite,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(
+                            "Segundo plano activo",
+                            color = AngOrange,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            backgroundState.detail,
+                            color = Muted,
+                            fontSize = 10.sp
+                        )
+                        Button(
+                            onClick = {
+                                MissionForegroundService.cancel(context)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PanelRaised,
+                                contentColor = InkWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Rounded.Stop, null)
+                            Spacer(Modifier.width(7.dp))
+                            Text("Cancelar misión de fondo")
+                        }
+                    }
+                }
             }
 
             if (running) {

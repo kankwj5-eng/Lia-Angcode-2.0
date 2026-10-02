@@ -125,7 +125,8 @@ class LocalMissionExecutor(
             ToolPermission.WORKSPACE_WRITE,
             ToolPermission.PROCESS_EXECUTE,
             ToolPermission.NETWORK,
-            ToolPermission.ANDROID_BRIDGE
+            ToolPermission.ANDROID_BRIDGE,
+            ToolPermission.WORKTREE_MANAGE
         )
 
         if (browserClient != null) {

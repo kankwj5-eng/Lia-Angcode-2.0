@@ -18,6 +18,7 @@ import com.kankwj.angcode.agents.MissionCapability
 import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.agents.MissionSession
 import com.kankwj.angcode.agents.MissionStateMachine
+import com.kankwj.angcode.agents.ModelRuntimeProfileSelector
 import com.kankwj.angcode.agents.ResourceSnapshot
 import com.kankwj.angcode.connectors.ConnectorSessionRegistry
 import com.kankwj.angcode.connectors.GitHubTokenStore
@@ -143,6 +144,9 @@ class LocalMissionExecutor(
         }
 
         val workspace = projectStore.resolveActiveOrScratch()
+        val resources = readResourceSnapshot(appContext)
+        val modelProfile = ModelRuntimeProfileSelector.select(resources)
+
         val broker = ToolBroker()
             .registerCoreTools()
             .registerAndroidTools(appContext)
@@ -252,20 +256,29 @@ class LocalMissionExecutor(
             runCatching {
                 val handle = LlamaServerManager.ensureRunning(
                     executable = File(llamaServerPath),
-                    model = File(model.path)
+                    model = File(model.path),
+                    contextSize = modelProfile.contextSize,
+                    threads = modelProfile.threads,
+                    batchSize = modelProfile.batchSize
                 )
                 LlamaServerModelGateway(handle)
             }.getOrElse { error ->
                 val fallback = llamaCliPath ?: throw error
                 LlamaCliModelGateway(
                     executable = File(fallback),
-                    model = File(model.path)
+                    model = File(model.path),
+                    contextSize = modelProfile.contextSize,
+                    threads = modelProfile.threads,
+                    batchSize = modelProfile.batchSize
                 )
             }
         } else {
             LlamaCliModelGateway(
                 executable = File(llamaCliPath!!),
-                model = File(model.path)
+                model = File(model.path),
+                contextSize = modelProfile.contextSize,
+                threads = modelProfile.threads,
+                batchSize = modelProfile.batchSize
             )
         }
         val coordinator = AdaptiveMissionCoordinator(
@@ -279,11 +292,11 @@ class LocalMissionExecutor(
         val result = coordinator.run(
             initial = session,
             rootContext = toolContext,
-            resources = readResourceSnapshot(appContext),
+            resources = resources,
             config = AgentRunConfig(
-                maxSteps = 10,
+                maxSteps = modelProfile.maxAgentSteps,
                 planningInterval = 4,
-                memoryWindowChars = 20_000
+                memoryWindowChars = modelProfile.memoryWindowChars
             ),
             cancellation = cancellation
         )

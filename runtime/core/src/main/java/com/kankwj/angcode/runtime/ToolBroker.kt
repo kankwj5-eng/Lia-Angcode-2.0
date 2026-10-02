@@ -19,7 +19,8 @@ enum class ToolPermission {
     WORKTREE_MANAGE,
     MODEL_MANAGE,
     SHIZUKU_PRIVILEGED,
-    SSH_REMOTE
+    SSH_REMOTE,
+    ANDROID_UI_ACTION
 }
 
 data class ToolContext(

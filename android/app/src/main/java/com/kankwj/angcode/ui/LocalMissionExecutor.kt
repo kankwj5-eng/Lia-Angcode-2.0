@@ -8,6 +8,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
+import com.kankwj.angcode.agents.AgentCancellationToken
 import com.kankwj.angcode.agents.AgentRunConfig
 import com.kankwj.angcode.agents.LlamaCliModelGateway
 import com.kankwj.angcode.agents.LlamaServerManager
@@ -69,7 +70,8 @@ class LocalMissionExecutor(
 
     fun run(
         analysis: MissionAnalysis,
-        initialSession: MissionSession? = null
+        initialSession: MissionSession? = null,
+        cancellation: AgentCancellationToken = AgentCancellationToken()
     ): LocalMissionOutcome {
         val model = modelStore.active()
             ?: error("No hay modelo GGUF activo")
@@ -193,7 +195,8 @@ class LocalMissionExecutor(
                 maxSteps = 10,
                 planningInterval = 4,
                 memoryWindowChars = 20_000
-            )
+            ),
+            cancellation = cancellation
         )
 
         return LocalMissionOutcome(

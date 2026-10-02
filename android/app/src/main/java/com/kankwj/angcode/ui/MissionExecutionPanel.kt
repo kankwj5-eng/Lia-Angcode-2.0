@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kankwj.angcode.agents.AgentCancellationToken
 import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCoordinatorResult
 import com.kankwj.angcode.ui.theme.AngOrange
@@ -102,7 +104,12 @@ fun MissionExecutionPanel(
 
                     scope.launch {
                         val runResult = withContext(Dispatchers.IO) {
-                            runCatching { executor.run(analysis) }
+                            runCatching {
+                                executor.run(
+                                    analysis = analysis,
+                                    cancellation = cancellationToken
+                                )
+                            }
                         }
 
                         runResult.onSuccess { outcome ->
@@ -137,6 +144,24 @@ fun MissionExecutionPanel(
                     if (running) "Trabajando…" else "Ejecutar misión local",
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            if (running) {
+                Button(
+                    onClick = {
+                        cancellation?.cancel()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PanelRaised,
+                        contentColor = InkWhite
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Rounded.Stop, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Cancelar misión", fontWeight = FontWeight.Bold)
+                }
             }
 
             if (!readiness.ready) {

@@ -2,7 +2,7 @@
   "id": "android-dev",
   "name": "Android Developer",
   "version": "0.3.0",
-  "description": "Toolchain Android ARM: Gradle, AAPT2, D8/R8, firma, ADB y Shizuku opcional.",
+  "description": "Toolchain Android ARM: Gradle, AAPT2, D8/R8, firma y ADB. Shizuku se habilita como backend opcional separado.",
   "packages": [
     "git",
     "openjdk-21",
@@ -28,8 +28,6 @@
     "android.adb.connect",
     "android.adb.logcat",
     "android.adb.install",
-    "android.shizuku.logcat",
-    "android.shizuku.apk_install",
     "artifact.zip"
   ],
   "permissions": [
@@ -41,7 +39,12 @@
     "ADB_REMOTE"
   ],
   "runtime": "ANDROID_NATIVE",
-  "architectures": ["aarch64", "arm", "x86_64", "i686"],
+  "architectures": [
+    "aarch64",
+    "arm",
+    "x86_64",
+    "i686"
+  ],
   "upstream": {
     "name": "Termux Android build tools",
     "license": "Apache-2.0",

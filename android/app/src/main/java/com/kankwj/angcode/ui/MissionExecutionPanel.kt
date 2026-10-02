@@ -172,7 +172,8 @@ fun MissionExecutionPanel(
                                     ToolPermission.WORKSPACE_WRITE,
                                     ToolPermission.PROCESS_EXECUTE,
                                     ToolPermission.NETWORK,
-                                    ToolPermission.ANDROID_BRIDGE
+                                    ToolPermission.ANDROID_BRIDGE,
+                                    ToolPermission.WORKTREE_MANAGE
                                 )
                                 if (browserClient != null) {
                                     permissions += ToolPermission.PRIVATE_NETWORK

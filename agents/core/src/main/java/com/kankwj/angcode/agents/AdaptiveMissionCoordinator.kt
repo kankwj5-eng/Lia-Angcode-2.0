@@ -209,6 +209,9 @@ class AdaptiveMissionCoordinator(
         }
 
         val wasCancelled = cancellation.isCancelled
+        if (wasCancelled) {
+            session = stateMachine.markCancelled(session)
+        }
         val preliminary = MissionCoordinatorResult(
             session = session,
             taskResults = results,

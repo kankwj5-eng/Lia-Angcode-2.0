@@ -16,20 +16,20 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Prepare source snapshot archive
+      - name: Pack source snapshot
         run: |
-          set -euo pipefail
-          rm -rf source-snapshot
-          mkdir -p source-snapshot
-          tar             --exclude='.git'             --exclude='.gradle'             --exclude='*/build'             --exclude='source-snapshot'             -czf /tmp/angcode-source.tar.gz .
-          cp /tmp/angcode-source.tar.gz source-snapshot/
-          test -s source-snapshot/angcode-source.tar.gz
-          tar -tzf source-snapshot/angcode-source.tar.gz | head -n 20
+          tar             --exclude='.git'             --exclude='.gradle'             --exclude='*/build'             --exclude='*/build/*'             --exclude='angcode-source-snapshot.tar.gz'             -czf angcode-source-snapshot.tar.gz .
+
+      - name: Verify snapshot
+        run: |
+          test -s angcode-source-snapshot.tar.gz
+          tar -tzf angcode-source-snapshot.tar.gz | head -50
+          sha256sum angcode-source-snapshot.tar.gz
 
       - name: Upload source snapshot
         uses: actions/upload-artifact@v4
         with:
           name: angcode-source-snapshot
-          path: source-snapshot/angcode-source.tar.gz
+          path: angcode-source-snapshot.tar.gz
           retention-days: 1
           if-no-files-found: error

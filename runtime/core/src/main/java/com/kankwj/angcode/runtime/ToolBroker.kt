@@ -24,6 +24,7 @@ enum class ToolPermission {
     ANDROID_UI_ACTION,
     ADB_REMOTE,
     GITHUB_READ,
+    GITHUB_WRITE,
     ROOT_PRIVILEGED
 }
 

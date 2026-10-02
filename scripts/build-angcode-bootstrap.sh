@@ -101,6 +101,10 @@ PY
 grep -Fq 'PACKAGES+=("libbz2")' scripts/build-bootstraps.sh
 grep -Fq '.built-packages-angcode' scripts/build/termux_step_setup_variables.sh
 
+# Docker's builder user must be able to place bootstrap-<arch>.zip in the
+# bind-mounted repository root. GitHub-hosted runners use a different uid.
+chmod 0777 "$WORKDIR/termux-packages"
+
 # Clean only AngCode-specific state inside the builder. Never use bootstrap -f:
 # upstream -f can expand an unset arch marker path and become dangerously broad.
 ./scripts/run-docker.sh bash -lc \

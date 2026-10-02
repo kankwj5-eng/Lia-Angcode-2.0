@@ -50,6 +50,7 @@ import com.kankwj.angcode.connectors.ConnectorSessionRegistry
 import com.kankwj.angcode.connectors.shizuku.ShizukuBridgeManager
 import com.kankwj.angcode.connectors.shizuku.registerShizukuTools
 import com.kankwj.angcode.connectors.connectMcp
+import com.kankwj.angcode.connectors.registerLightpandaTools
 import com.kankwj.angcode.runtime.ActiveProjectStore
 import com.kankwj.angcode.runtime.ExecutableDiscovery
 import com.kankwj.angcode.runtime.LocalModelStore
@@ -141,6 +142,7 @@ fun MissionExecutionPanel(
                                     .registerCoreTools()
                                     .registerAndroidTools(context)
                                     .registerModelTools(context)
+                                    .registerLightpandaTools(context)
 
                                 val browserClient = ConnectorSessionRegistry.get("browser")
                                 if (browserClient != null) {

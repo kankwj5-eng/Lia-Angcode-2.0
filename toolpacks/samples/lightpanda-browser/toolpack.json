@@ -28,7 +28,8 @@
     "PROCESS_EXECUTE",
     "PRIVATE_NETWORK",
     "MCP_EXTERNAL",
-    "SANDBOX_MANAGE"
+    "SANDBOX_MANAGE",
+    "ARTIFACT_WRITE"
   ],
   "runtime": "PROOT",
   "architectures": [

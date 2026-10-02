@@ -1,17 +1,20 @@
 {
   "id": "github-connector",
   "name": "GitHub Connector",
-  "version": "0.1.0",
-  "description": "Acceso GitHub de solo lectura con token cifrado por Android Keystore.",
+  "version": "0.2.0",
+  "description": "GitHub REST con lectura y escrituras de alto riesgo separadas por permisos.",
   "packages": [],
   "tools": [
     "github.repo",
     "github.issues",
     "github.pulls",
     "github.branches",
-    "github.actions"
+    "github.actions",
+    "github.branch.create",
+    "github.file.put",
+    "github.pr.create"
   ],
-  "permissions": ["NETWORK", "GITHUB_READ"],
+  "permissions": ["NETWORK", "GITHUB_READ", "GITHUB_WRITE"],
   "runtime": "ANDROID_NATIVE",
   "architectures": [],
   "upstream": {

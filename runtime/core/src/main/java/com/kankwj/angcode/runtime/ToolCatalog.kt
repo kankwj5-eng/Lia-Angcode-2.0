@@ -47,6 +47,7 @@ object ToolCatalog {
         ToolCapability("model.list", ToolFamily.CONNECTOR, "Listar modelos GGUF locales", CapabilityStatus.BUILT_IN),
         ToolCapability("model.activate", ToolFamily.CONNECTOR, "Activar modelo local", CapabilityStatus.BUILT_IN),
         ToolCapability("tool.catalog", ToolFamily.CONNECTOR, "Consultar catálogo de capacidades", CapabilityStatus.BUILT_IN),
+        ToolCapability("audit.tail", ToolFamily.CONNECTOR, "Inspeccionar auditoría reciente", CapabilityStatus.BUILT_IN),
         ToolCapability("toolpack.list", ToolFamily.CONNECTOR, "Listar packs incluidos", CapabilityStatus.BUILT_IN),
         ToolCapability("toolpack.inspect", ToolFamily.CONNECTOR, "Inspeccionar requisitos de un pack", CapabilityStatus.BUILT_IN),
         ToolCapability("package.list", ToolFamily.SANDBOX, "Listar paquetes instalados", CapabilityStatus.BUILT_IN),

@@ -68,16 +68,36 @@ class ToolBroker {
     fun availableTools(): List<AgentTool> = tools.values.sortedBy { it.id }
 
     fun execute(call: ToolCall, context: ToolContext): ToolResponse {
+        val started = System.currentTimeMillis()
         val tool = tools[call.toolId]
-            ?: return ToolResponse(false, "Herramienta no registrada: ${call.toolId}")
 
-        val missing = tool.requiredPermissions - context.grantedPermissions
-        if (missing.isNotEmpty()) {
-            return ToolResponse(false, "Permisos faltantes: ${missing.joinToString()}")
+        val response = when {
+            tool == null ->
+                ToolResponse(false, "Herramienta no registrada: ${call.toolId}")
+
+            else -> {
+                val missing = tool.requiredPermissions - context.grantedPermissions
+                if (missing.isNotEmpty()) {
+                    ToolResponse(false, "Permisos faltantes: ${missing.joinToString()}")
+                } else {
+                    runCatching { tool.invoke(call, context) }
+                        .getOrElse { ToolResponse(false, it.message ?: it::class.java.simpleName) }
+                }
+            }
         }
 
-        return runCatching { tool.invoke(call, context) }
-            .getOrElse { ToolResponse(false, it.message ?: it::class.java.simpleName) }
+        runCatching {
+            ToolAuditLog.record(
+                workspace = context.workspace,
+                call = call,
+                requiredPermissions = tool?.requiredPermissions.orEmpty(),
+                grantedPermissions = context.grantedPermissions,
+                response = response,
+                durationMs = (System.currentTimeMillis() - started).coerceAtLeast(0L)
+            )
+        }
+
+        return response
     }
 }
 

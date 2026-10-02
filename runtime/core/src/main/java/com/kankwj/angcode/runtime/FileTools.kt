@@ -118,6 +118,7 @@ fun ToolBroker.registerCoreTools(
     register(DeviceInfoTool())
     register(RuntimeExecutablesTool())
     register(ToolCatalogTool())
+    register(AuditTailTool())
     register(PackageListTool())
     register(PackageInstallTool())
 

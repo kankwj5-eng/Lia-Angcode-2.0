@@ -36,6 +36,7 @@ import com.kankwj.angcode.runtime.ToolBroker
 import com.kankwj.angcode.runtime.ToolCall
 import com.kankwj.angcode.runtime.ToolContext
 import com.kankwj.angcode.runtime.ToolPermission
+import com.kankwj.angcode.runtime.WorkspaceManager
 import com.kankwj.angcode.runtime.registerAndroidTools
 import com.kankwj.angcode.runtime.registerCoreTools
 import com.kankwj.angcode.runtime.registerModelTools
@@ -77,6 +78,18 @@ class LocalMissionExecutor(
         }
         val backend = if ("llama-server" in executables) "servidor persistente" else "fallback CLI"
         return LocalMissionReadiness(true, model.name, "Listo · " + backend)
+    }
+
+    private fun validatedWorkspace(candidate: File): File {
+        val manager = WorkspaceManager(appContext)
+        val root = manager.rootDirectory().canonicalFile
+        val target = candidate.canonicalFile
+        require(target.isDirectory) { "Workspace de automatización no encontrado" }
+        require(target.toPath().startsWith(root.toPath())) {
+            "Workspace de automatización fuera de files/workspaces"
+        }
+        require(target != root) { "La raíz de workspaces no es un proyecto" }
+        return target
     }
 
     fun privilegeOptions(analysis: MissionAnalysis): List<MissionPrivilegeOption> {
@@ -153,7 +166,8 @@ class LocalMissionExecutor(
         analysis: MissionAnalysis,
         initialSession: MissionSession? = null,
         cancellation: AgentCancellationToken = AgentCancellationToken(),
-        approvedPermissions: Set<ToolPermission> = emptySet()
+        approvedPermissions: Set<ToolPermission> = emptySet(),
+        workspaceOverride: File? = null
     ): LocalMissionOutcome {
         val model = modelStore.active()
             ?: error("No hay modelo GGUF activo")
@@ -165,7 +179,8 @@ class LocalMissionExecutor(
             error("llama-server/llama-cli no están instalados")
         }
 
-        val workspace = projectStore.resolveActiveOrScratch()
+        val workspace = workspaceOverride?.let(::validatedWorkspace)
+            ?: projectStore.resolveActiveOrScratch()
         val resources = readResourceSnapshot(appContext)
         val modelProfile = ModelRuntimeProfileSelector.select(resources)
 

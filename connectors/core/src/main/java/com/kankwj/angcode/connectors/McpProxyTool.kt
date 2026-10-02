@@ -23,7 +23,7 @@ class McpProxyTool(
 
     override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
         val result = client.callTool(definition.name, call.arguments)
-        val artifactPaths = persistImages(result, context)
+        val artifactPaths = persistBinaryContents(result, context)
 
         val output = buildString {
             if (result.text.isNotBlank()) {
@@ -38,13 +38,13 @@ class McpProxyTool(
                     append(path)
                     append("\n")
                 }
-            } else if (result.imageCount > 0) {
+            } else if (result.binaryContents.isNotEmpty()) {
                 if (isNotEmpty()) append("\n")
                 append(
                     if (ToolPermission.ARTIFACT_WRITE in context.grantedPermissions) {
-                        "MCP devolvió imagen(es), pero no se pudieron persistir."
+                        "MCP devolvió binario(s), pero no se pudieron persistir."
                     } else {
-                        "MCP devolvió imagen(es); ARTIFACT_WRITE no fue concedido."
+                        "MCP devolvió binario(s); ARTIFACT_WRITE no fue concedido."
                     }
                 )
             }
@@ -62,17 +62,18 @@ class McpProxyTool(
                 "mcpBackend" to client.backendId,
                 "sessionId" to (client.sessionId ?: ""),
                 "imageCount" to result.imageCount.toString(),
+                "binaryCount" to result.binaryContents.size.toString(),
                 "artifactCount" to artifactPaths.size.toString(),
                 "artifacts" to artifactPaths.joinToString(",")
             )
         )
     }
 
-    private fun persistImages(
+    private fun persistBinaryContents(
         result: McpCallResult,
         context: ToolContext
     ): List<String> {
-        if (result.images.isEmpty()) return emptyList()
+        if (result.binaryContents.isEmpty()) return emptyList()
         if (ToolPermission.ARTIFACT_WRITE !in context.grantedPermissions) {
             return emptyList()
         }
@@ -84,40 +85,30 @@ class McpProxyTool(
         }
         artifacts.mkdirs()
 
-        val safeTool = definition.name
-            .replace(Regex("[^A-Za-z0-9._-]"), "_")
-            .take(50)
-            .ifBlank { "mcp" }
+        val safeTool = McpArtifactNaming.safeToolName(definition.name)
+        val timestamp = System.currentTimeMillis()
 
-        return result.images.mapIndexedNotNull { index, image ->
+        return result.binaryContents.mapIndexedNotNull { index, binary ->
             runCatching {
-                require(image.dataBase64.length <= MAX_BASE64_CHARS) {
-                    "Imagen MCP demasiado grande"
-                }
-                val bytes = Base64.getDecoder().decode(image.dataBase64)
-                require(bytes.size <= MAX_IMAGE_BYTES) {
-                    "Imagen MCP decodificada demasiado grande"
+                require(binary.dataBase64.length <= MAX_BASE64_CHARS) {
+                    "Contenido MCP demasiado grande"
                 }
 
-                val extension = when (image.mimeType.lowercase()) {
-                    "image/png" -> "png"
-                    "image/jpeg", "image/jpg" -> "jpg"
-                    "image/webp" -> "webp"
-                    "image/gif" -> "gif"
-                    "image/svg+xml" -> "svg"
-                    else -> "bin"
+                val bytes = Base64.getDecoder().decode(binary.dataBase64)
+                require(bytes.size <= MAX_BINARY_BYTES) {
+                    "Contenido MCP decodificado demasiado grande"
                 }
 
+                val extension = McpArtifactNaming.extensionForMime(binary.mimeType)
                 val file = File(
                     artifacts,
-                    "browser-" + safeTool + "-" +
-                        System.currentTimeMillis() + "-" + index +
-                        "." + extension
+                    "mcp-" + safeTool + "-" + timestamp + "-" + index + "." + extension
                 ).canonicalFile
 
                 require(file.toPath().startsWith(artifacts.toPath())) {
                     "Nombre de artifact MCP inválido"
                 }
+
                 file.writeBytes(bytes)
                 file.relativeTo(workspace).invariantSeparatorsPath
             }.getOrNull()
@@ -125,8 +116,8 @@ class McpProxyTool(
     }
 
     companion object {
-        private const val MAX_IMAGE_BYTES = 30 * 1024 * 1024
-        private const val MAX_BASE64_CHARS = 42_000_000
+        private const val MAX_BINARY_BYTES = 50 * 1024 * 1024
+        private const val MAX_BASE64_CHARS = 70_000_000
     }
 }
 

@@ -14,7 +14,9 @@ data class McpToolDefinition(
 
 data class McpBinaryContent(
     val dataBase64: String,
-    val mimeType: String
+    val mimeType: String,
+    val name: String? = null,
+    val sourceUri: String? = null
 )
 
 data class McpCallResult(
@@ -22,7 +24,8 @@ data class McpCallResult(
     val isError: Boolean,
     val imageCount: Int,
     val rawJson: String,
-    val images: List<McpBinaryContent> = emptyList()
+    val images: List<McpBinaryContent> = emptyList(),
+    val binaryContents: List<McpBinaryContent> = images
 )
 
 class McpProtocolException(message: String) : IllegalStateException(message)
@@ -116,21 +119,52 @@ class McpHttpClient(
 
         val content = result.optJSONArray("content") ?: JSONArray()
         val textParts = mutableListOf<String>()
-        var imageCount = 0
+        val binaries = mutableListOf<McpBinaryContent>()
 
         for (index in 0 until content.length()) {
             val item = content.optJSONObject(index) ?: continue
             when (item.optString("type")) {
-                "text" -> item.optString("text").takeIf { it.isNotBlank() }?.let(textParts::add)
-                "image" -> imageCount++
+                "text" -> item.optString("text")
+                    .takeIf { it.isNotBlank() }
+                    ?.let(textParts::add)
+
+                "image", "audio" -> {
+                    val data = item.optString("data")
+                    val mime = item.optString("mimeType")
+                    if (data.isNotBlank() && mime.isNotBlank()) {
+                        binaries += McpBinaryContent(
+                            dataBase64 = data,
+                            mimeType = mime
+                        )
+                    }
+                }
+
+                "resource" -> {
+                    val resource = item.optJSONObject("resource") ?: continue
+                    resource.optString("text")
+                        .takeIf { it.isNotBlank() }
+                        ?.let(textParts::add)
+
+                    val blob = resource.optString("blob")
+                    if (blob.isNotBlank()) {
+                        binaries += McpBinaryContent(
+                            dataBase64 = blob,
+                            mimeType = resource.optString("mimeType", "application/octet-stream"),
+                            name = resource.optString("name").takeIf { it.isNotBlank() },
+                            sourceUri = resource.optString("uri").takeIf { it.isNotBlank() }
+                        )
+                    }
+                }
             }
         }
 
         return McpCallResult(
             text = textParts.joinToString("\n"),
             isError = result.optBoolean("isError", false),
-            imageCount = imageCount,
-            rawJson = response.toString()
+            imageCount = binaries.count { it.mimeType.startsWith("image/", ignoreCase = true) },
+            rawJson = response.toString(),
+            images = binaries.filter { it.mimeType.startsWith("image/", ignoreCase = true) },
+            binaryContents = binaries
         )
     }
 
@@ -177,7 +211,19 @@ class McpHttpClient(
 
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            val body = stream?.use { input ->
+                val buffer = ByteArray(16 * 1024)
+                val output = java.io.ByteArrayOutputStream()
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    output.write(buffer, 0, read)
+                    if (output.size() > MAX_RESPONSE_BYTES) {
+                        error("Respuesta MCP demasiado grande")
+                    }
+                }
+                output.toString(Charsets.UTF_8.name())
+            }.orEmpty()
 
             if (status !in 200..299) {
                 throw McpProtocolException(

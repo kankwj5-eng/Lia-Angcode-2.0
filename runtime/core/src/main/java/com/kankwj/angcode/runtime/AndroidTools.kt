@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -154,6 +155,78 @@ class AndroidThermalTool(
         }
 }
 
+class AndroidApkInspectTool(
+    private val appContext: Context
+) : AgentTool {
+    override val id = "android.apk.inspect"
+    override val description = "Inspecciona metadata de un APK del workspace sin instalarlo."
+    override val requiredPermissions = setOf(
+        ToolPermission.WORKSPACE_READ,
+        ToolPermission.ANDROID_BRIDGE
+    )
+
+    override fun invoke(call: ToolCall, context: ToolContext): ToolResponse {
+        val path = call.arguments["path"] ?: return ToolResponse(false, "Falta path")
+        val root = context.workspace.canonicalFile
+        val apk = File(root, path).canonicalFile
+        if (!apk.toPath().startsWith(root.toPath())) {
+            return ToolResponse(false, "Ruta fuera del workspace")
+        }
+        if (!apk.isFile || !apk.extension.equals("apk", ignoreCase = true)) {
+            return ToolResponse(false, "APK no encontrado")
+        }
+
+        val flags = PackageManager.GET_ACTIVITIES or
+            PackageManager.GET_SERVICES or
+            PackageManager.GET_RECEIVERS or
+            PackageManager.GET_PROVIDERS or
+            PackageManager.GET_PERMISSIONS
+
+        @Suppress("DEPRECATION")
+        val info = appContext.packageManager.getPackageArchiveInfo(
+            apk.absolutePath,
+            flags
+        ) ?: return ToolResponse(false, "Android no pudo leer el APK")
+
+        val appInfo = info.applicationInfo
+        val versionCode = if (Build.VERSION.SDK_INT >= 28) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
+        }
+
+        val requestedPermissions = info.requestedPermissions
+            ?.sorted()
+            .orEmpty()
+
+        val output = buildString {
+            appendLine("package=" + info.packageName)
+            appendLine("versionName=" + (info.versionName ?: ""))
+            appendLine("versionCode=" + versionCode)
+            appendLine("minSdk=" + (appInfo?.minSdkVersion ?: -1))
+            appendLine("targetSdk=" + (appInfo?.targetSdkVersion ?: -1))
+            appendLine("activities=" + info.activities.orEmpty().size)
+            appendLine("services=" + info.services.orEmpty().size)
+            appendLine("receivers=" + info.receivers.orEmpty().size)
+            appendLine("providers=" + info.providers.orEmpty().size)
+            appendLine("permissions=" + requestedPermissions.size)
+            requestedPermissions.forEach { appendLine("permission=" + it) }
+        }.trimEnd()
+
+        return ToolResponse(
+            true,
+            output,
+            mapOf(
+                "package" to info.packageName,
+                "versionName" to (info.versionName ?: ""),
+                "versionCode" to versionCode.toString(),
+                "bytes" to apk.length().toString()
+            )
+        )
+    }
+}
+
 class AndroidNetworkTool(
     private val appContext: Context
 ) : AgentTool {
@@ -230,6 +303,7 @@ fun ToolBroker.registerAndroidTools(context: Context): ToolBroker = apply {
     register(AndroidMemoryTool(app))
     register(AndroidStorageTool(app))
     register(AndroidThermalTool(app))
+    register(AndroidApkInspectTool(app))
     register(AndroidNetworkTool(app))
     register(AndroidSensorsListTool(app))
     register(ClipboardReadTool(app))

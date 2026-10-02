@@ -83,6 +83,7 @@ object ToolCatalog {
         ToolCapability("android.memory", ToolFamily.ANDROID, "RAM disponible/total", CapabilityStatus.BUILT_IN),
         ToolCapability("android.storage", ToolFamily.ANDROID, "Almacenamiento del runtime", CapabilityStatus.BUILT_IN),
         ToolCapability("android.thermal", ToolFamily.ANDROID, "Estado térmico del dispositivo", CapabilityStatus.BUILT_IN),
+        ToolCapability("android.apk.inspect", ToolFamily.ANDROID, "Inspeccionar metadata APK sin instalar", CapabilityStatus.BUILT_IN),
         ToolCapability("android.network", ToolFamily.ANDROID, "Conectividad y transporte de red", CapabilityStatus.BUILT_IN),
         ToolCapability("android.sensors.list", ToolFamily.ANDROID, "Sensores físicos disponibles", CapabilityStatus.BUILT_IN),
         ToolCapability("android.clipboard.read", ToolFamily.ANDROID, "Leer portapapeles", CapabilityStatus.BUILT_IN),

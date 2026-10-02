@@ -41,7 +41,7 @@ object ToolCatalog {
         ToolCapability("process.exec", ToolFamily.PROCESS, "Ejecutar proceso corto", CapabilityStatus.BUILT_IN),
         ToolCapability("process.start", ToolFamily.PROCESS, "Iniciar proceso administrado", CapabilityStatus.BUILT_IN),
         ToolCapability("process.write", ToolFamily.PROCESS, "Escribir stdin de proceso administrado", CapabilityStatus.BUILT_IN),
-        ToolCapability("process.close_input", ToolFamily.PROCESS, "Cerrar stdin de proceso administrado", CapabilityStatus.BUILT_IN),
+        ToolCapability("process.stdin.close", ToolFamily.PROCESS, "Cerrar stdin de proceso administrado", CapabilityStatus.BUILT_IN),
         ToolCapability("process.logs", ToolFamily.PROCESS, "Leer logs de un proceso", CapabilityStatus.BUILT_IN),
         ToolCapability("process.list", ToolFamily.PROCESS, "Listar procesos administrados", CapabilityStatus.BUILT_IN),
         ToolCapability("process.stop", ToolFamily.PROCESS, "Detener proceso administrado", CapabilityStatus.BUILT_IN),

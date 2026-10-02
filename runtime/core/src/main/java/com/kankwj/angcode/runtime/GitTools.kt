@@ -97,7 +97,15 @@ class GitCommitTool : AgentTool {
         val message = call.arguments["message"]?.trim()?.takeIf { it.isNotEmpty() }
             ?: return ToolResponse(false, "Falta message")
         if (message.length > 500) return ToolResponse(false, "Mensaje demasiado largo")
-        return runGit(context, listOf("commit", "-m", message), 60_000)
+        return runGit(
+            context,
+            listOf(
+                "-c", "user.name=AngCode",
+                "-c", "user.email=angcode@localhost",
+                "commit", "-m", message
+            ),
+            60_000
+        )
     }
 }
 

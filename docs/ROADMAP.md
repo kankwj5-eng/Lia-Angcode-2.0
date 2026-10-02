@@ -1,145 +1,142 @@
 # Roadmap
 
-Estado actualizado: AngCode ya supera el esqueleto de MVP. Esta lista diferencia código implementado de validación pendiente en hardware real.
+Estado: núcleo funcional en construcción avanzada. Los checks reflejan código integrado y compilado en CI; no sustituyen la validación final en un teléfono físico.
 
 ## Fase 0 — Fundación
 - [x] Repositorio público limpio
-- [x] Arquitectura modular Android / runtime / agents / connectors
+- [x] Arquitectura inicial
 - [x] Reglas para agentes
+- [x] Separación de módulos
+- [x] Auditoría selectiva de Termux (bootstrap, ejecución, paths, servicios y estrategia)
 - [x] Package/applicationId: `com.kankwj.angcode`
-- [x] Estrategia Termux fork con prefix propio documentada
-- [x] Auditoría de componentes upstream reutilizables
 
 ## Fase 1 — Android Shell
-- [x] Proyecto Android moderno
+- [x] Proyecto Android/Gradle moderno
 - [x] Jetpack Compose
 - [x] Tema Obsidian Orange
 - [x] Dashboard
 - [x] Navegación principal
-- [x] Gestor de proyectos / proyecto activo
-- [x] Gestor y exportación de artefactos
-- [x] Terminal persistente controlada por el usuario
-- [x] Ejecución de misión en primer plano
-- [x] Foreground service para misiones largas
+- [x] Gestor de proyectos + proyecto activo
+- [x] Gestor/exportador de artefactos
+- [x] Ajustes de runtime/modelo/conectores
 
 ## Fase 2 — Runtime
-- [x] Bootstrap AngCode reproducible basado en termux-packages
-- [x] Prefix/package propios
-- [x] Instalador staging + rollback + SHA-256
-- [x] Descarga de Releases verificadas
-- [x] Ejecución de comandos estructurados
+- [x] Bootstrap forked para el prefix de AngCode
+- [x] Instalador staging + SHA-256 + symlinks + rollback
+- [x] Ejecución estructurada de comandos
 - [x] Procesos observables/cancelables
-- [x] stdin interactivo administrado
-- [x] Workspace privado
+- [x] Procesos persistentes con stdin interactivo
+- [x] Sistema de archivos de workspace
 - [x] Importar/exportar
-- [x] Logs y auditoría
-- [ ] Validar bootstrap aarch64 completo en hardware físico
-- [ ] Publicar primera Release estable del runtime dev/full
+- [x] Logs estructurados
+- [x] Descubrimiento de ejecutables
+- [x] Build reproducible por ABI/perfil
+- [x] Soporte para publicar runtime verificado en GitHub Releases
+- [x] Descarga/instalación de Runtime Releases desde la app
+- [ ] Publicar y validar la primera Release runtime `dev/aarch64` en un teléfono
 
 ## Fase 3 — Tool Broker
-- [x] Registro dinámico de herramientas
-- [x] IDs/contratos de entrada/salida
+- [x] Registro de herramientas
+- [x] Contratos de entrada/salida
 - [x] Permisos por herramienta
-- [x] Timeouts y límites
-- [x] Auditoría JSONL con redacción
+- [x] Timeouts/límites
+- [x] Auditoría redactada
 - [x] Tool Packs
-- [x] Descubrimiento de capacidades por el agente
-- [x] Gestión de paquetes separada por permiso
+- [x] Instalación de paquetes separada de PROCESS_EXECUTE
+- [x] Catálogo consultable por agentes
+- [x] MCP dinámico
 
 ## Fase 4 — Agentes
 - [x] Director
-- [x] Analizador/Planner local
-- [x] Scheduler por RAM/batería/temperatura
+- [x] Planner local determinista
+- [x] Scheduler sensible a RAM/batería/temperatura
 - [x] Event Bus
-- [x] Workers/celdas lógicas
-- [x] Inferencia compartida para ahorrar RAM
-- [x] Memoria por ejecución
-- [x] Historial persistente
-- [x] Reanudación de misiones incompletas
+- [x] Celdas
+- [x] Memoria de ejecución
 - [x] Checkpoints
-- [x] Worktrees Git por misión
-- [x] Review/merge administrado
-- [x] Cancelación cooperativa y de procesos
+- [x] Worktrees Git
+- [x] Review + merge
+- [x] Multiworker con inferencia compartida
+- [x] Cancelación cooperativa
+- [x] Historial versionado y reanudación
+- [x] Servicio foreground para misiones largas
+- [x] Aislamiento automático de trabajo mutable cuando Git lo permite
 
 ## Fase 5 — Desarrollo real
 - [x] Git
 - [x] Python / pytest
 - [x] Node / npm
-- [x] Clang / CMake / Ninja
-- [x] Java / Gradle
-- [x] AAPT / AAPT2
-- [x] D8 / R8
-- [x] apksigner
-- [x] ADB / fastboot
-- [x] Compilar tareas Android por Gradle
+- [x] Clang/CMake/Ninja
+- [x] Java/Gradle
+- [x] Toolchain Android ARM
+- [x] Compilar APK
 - [x] Inspeccionar/verificar APK
-- [x] Instalar APK vía Shizuku
-- [x] Logcat vía Shizuku
-- [x] Instalar/logcat vía ADB con permiso dedicado
-- [ ] Validar build Android completo end-to-end en teléfono ARM
+- [x] ADB devices/connect/install/logcat
+- [x] SQLite / JSON
+- [x] FFmpeg / ImageMagick
+- [x] SSH exec/upload/download
+- [ ] Validación end-to-end de build APK dentro del runtime publicado en teléfono real
 
 ## Fase 6 — Browser
-- [x] Navegador visible WebView
-- [x] Runtime Lightpanda verificado
+- [x] Navegador visible WebView para el usuario
+- [x] Lightpanda oficial verificado por SHA-256
 - [x] Lightpanda dentro de PRoot aislado
-- [x] MCP local
-- [x] Herramientas `browser.*` para el agente
-- [x] Conexión automática a misiones Browser/Web
-- [x] Tomar/devolver control mediante superficies separadas
-- [ ] Prueba end-to-end en dispositivo con páginas complejas
+- [x] MCP local en 127.0.0.1
+- [x] Registro dinámico `browser.*`
+- [x] DOM/acciones según herramientas MCP expuestas por Lightpanda
+- [x] Argumentos MCP estructurados (objetos/listas/bool/números)
+- [x] Instalación/inicio/parada desde UI
+- [ ] Persistir screenshots/downloads MCP directamente como artifacts cuando el servidor devuelva contenido binario
+- [ ] Handoff opcional de una sesión agentica a una vista visible equivalente
 
 ## Fase 7 — Conectores
-- [x] Cliente MCP oficial Kotlin
-- [x] Compatibilidad MCP legacy
+- [x] Cliente MCP oficial Kotlin + fallback legacy
 - [x] Servidores MCP locales
-- [x] GitHub read-only con token cifrado en Keystore
-- [x] SSH/SCP estricto
-- [x] Delegación a otra PC por SSH
-- [ ] GitHub write actions como permiso independiente (opcional, post-MVP)
+- [x] GitHub read-only con token cifrado y permiso dedicado
+- [x] SSH con known_hosts estricto
+- [x] Bridge remoto genérico mediante SSH
+- [ ] Escrituras GitHub de alto riesgo detrás de permisos/confirmaciones separadas
 
 ## Fase 8 — Android avanzado
-- [x] Android Bridge: batería/RAM/storage/thermal
-- [x] Clipboard
-- [x] Red/sensores
-- [x] APK inspection
-- [x] Acciones UI visibles y permission-gated
+- [x] Android Bridge básico
+- [x] Batería/RAM/almacenamiento/térmica/red/sensores
+- [x] Portapapeles y acciones visibles
+- [x] Inspección APK
 - [x] Shizuku opcional
-- [x] Shizuku: package info / launch / logcat / APK install / screenshot
+- [x] Screenshot privilegiado Shizuku a artifacts
+- [ ] Expandir equivalentes de Termux:API donde aporten valor
 - [ ] Root/libsu opcional
-- [ ] Watchers/automatizaciones persistentes (post-MVP)
+- [ ] Watchers/automatizaciones locales de larga duración
 
-## Fase 9 — Modelo local
-- [x] Importación GGUF validada
-- [x] SHA-256 local
+## Modelo local
+- [x] Importación GGUF
+- [x] Validación cabecera + SHA-256
 - [x] Modelo activo
-- [x] llama.cpp Tool Pack
-- [x] llama-cli fallback
-- [x] llama-server persistente
-- [x] Tool calling JSON → Tool Broker
-- [x] Cancelación de inferencia/servidor
-- [ ] Perfiles automáticos de contexto/hilos según RAM y SoC
-
-## Fase 10 — Pulido final
-- [ ] Chat/actividad refinados
-- [ ] Estados visuales de workers
-- [ ] Accesibilidad y tamaños de pantalla
-- [ ] Mascota oficial: gatito + elementos verdes/turquesa
-- [ ] Animación cola/cabeza/manos/pececito
-- [ ] Mascota flotante sobre chat durante trabajo
-- [ ] QA visual y de rendimiento
+- [x] Tool Pack `local-llm`
+- [x] `llama-cli` fallback
+- [x] `llama-server` persistente
+- [x] Protocolo JSON tool/final
+- [x] Tool calls siempre atraviesan Tool Broker
+- [x] Un servidor/modelo compartido por workers lógicos
 
 ## Criterio de MVP
 
-El MVP de código ya cubre:
+### Implementado en código
+- [x] Crear/importar proyecto
+- [x] Ejecutar comandos dentro de workspace
+- [x] Mostrar procesos/logs
+- [x] Modelo local con herramientas estructuradas
+- [x] Producir/exportar artefactos
+- [x] Historial + checkpoints
+- [x] Reanudar misión incompleta
+- [x] Navegador agentico
+- [x] Runtime instalable/verificable
 
-1. crear/importar proyecto;
-2. ejecutar comandos y herramientas dentro de workspace;
-3. mostrar/cancelar procesos y logs;
-4. ejecutar un modelo GGUF local con herramientas estructuradas;
-5. trabajar con agentes, checkpoints y worktrees;
-6. usar navegador headless/visible;
-7. producir/exportar artefactos;
-8. conservar historial/auditoría y reanudar misiones;
-9. continuar misiones largas mediante foreground service.
-
-Los bloqueos restantes para declarar una versión instalable estable son validación end-to-end del runtime aarch64 y pruebas en hardware Android real.
+### Gate de entrega
+- [ ] Runtime `dev/aarch64` termina CI y se publica
+- [ ] Instalar runtime desde AngCode en ARM64 real
+- [ ] Importar GGUF pequeño y completar misión con tool call real
+- [ ] Compilar un proyecto de prueba y exportar su APK
+- [ ] Ejecutar navegación Lightpanda real en el teléfono
+- [ ] Regression pass final
+- [ ] Capa estética final: mascota gatito animada sobre el chat

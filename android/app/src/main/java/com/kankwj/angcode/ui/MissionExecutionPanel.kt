@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import com.kankwj.angcode.agents.AdaptiveMissionCoordinator
 import com.kankwj.angcode.agents.AgentRunConfig
 import com.kankwj.angcode.agents.LlamaCliModelGateway
+import com.kankwj.angcode.agents.LlamaServerManager
+import com.kankwj.angcode.agents.LlamaServerModelGateway
 import com.kankwj.angcode.agents.MissionAnalysis
 import com.kankwj.angcode.agents.MissionCapability
 import com.kankwj.angcode.agents.MissionCoordinatorResult
@@ -88,8 +90,9 @@ fun MissionExecutionPanel(
 
     val activeModel = modelStore.active()
     val executables = ExecutableDiscovery.forApp(context).asMap()
-    val llama = executables["llama-cli"]
-    val ready = activeModel != null && llama != null
+    val llamaCli = executables["llama-cli"]
+    val llamaServer = executables["llama-server"]
+    val ready = activeModel != null && (llamaServer != null || llamaCli != null)
 
     Surface(
         color = Panel,
@@ -116,8 +119,12 @@ fun MissionExecutionPanel(
                     Text(
                         when {
                             activeModel == null -> "Selecciona un modelo GGUF en Ajustes"
-                            llama == null -> "Instala el Tool Pack Local LLM"
-                            else -> activeModel.name
+                            llamaServer == null && llamaCli == null ->
+                                "Instala el Tool Pack Local LLM"
+                            llamaServer != null ->
+                                activeModel.name + " · servidor persistente"
+                            else ->
+                                activeModel.name + " · fallback CLI"
                         },
                         color = Muted,
                         fontSize = 11.sp
@@ -129,7 +136,9 @@ fun MissionExecutionPanel(
                 enabled = ready && !running,
                 onClick = {
                     val model = activeModel ?: return@Button
-                    val llamaPath = llama ?: return@Button
+                    val cliPath = llamaCli
+                    val serverPath = llamaServer
+                    if (cliPath == null && serverPath == null) return@Button
                     running = true
                     result = null
                     error = null
@@ -198,10 +207,27 @@ fun MissionExecutionPanel(
                                     toolContext
                                 )
 
-                                val gateway = LlamaCliModelGateway(
-                                    executable = File(llamaPath),
-                                    model = File(model.path)
-                                )
+                                val gateway = if (serverPath != null) {
+                                    runCatching {
+                                        val handle = LlamaServerManager.ensureRunning(
+                                            executable = File(serverPath),
+                                            model = File(model.path)
+                                        )
+                                        LlamaServerModelGateway(handle)
+                                    }.getOrElse {
+                                        val fallback = cliPath
+                                            ?: throw it
+                                        LlamaCliModelGateway(
+                                            executable = File(fallback),
+                                            model = File(model.path)
+                                        )
+                                    }
+                                } else {
+                                    LlamaCliModelGateway(
+                                        executable = File(cliPath!!),
+                                        model = File(model.path)
+                                    )
+                                }
                                 val coordinator = AdaptiveMissionCoordinator(
                                     model = gateway,
                                     broker = broker
@@ -255,7 +281,7 @@ fun MissionExecutionPanel(
 
             if (!ready) {
                 Text(
-                    "La misión ya puede planificarse sin modelo. La ejecución se activa cuando existen GGUF activo + llama-cli.",
+                    "La misión ya puede planificarse sin modelo. La ejecución se activa cuando hay GGUF activo + llama-server/llama-cli.",
                     color = Muted,
                     fontSize = 10.sp
                 )

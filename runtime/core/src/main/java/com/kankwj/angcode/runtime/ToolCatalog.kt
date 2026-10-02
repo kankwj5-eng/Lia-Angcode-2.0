@@ -109,6 +109,11 @@ object ToolCatalog {
         ToolCapability("browser.*", ToolFamily.CONNECTOR, "Navegador headless Lightpanda por MCP", CapabilityStatus.BUILT_IN, "lightpanda-io/browser"),
         ToolCapability("ssh.exec", ToolFamily.CONNECTOR, "Ejecutar comando remoto con host key estricta", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
         ToolCapability("ssh.upload", ToolFamily.CONNECTOR, "Subir archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
-        ToolCapability("ssh.download", ToolFamily.CONNECTOR, "Descargar archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable")
+        ToolCapability("ssh.download", ToolFamily.CONNECTOR, "Descargar archivo por SCP", CapabilityStatus.BUILT_IN, "openssh/openssh-portable"),
+        ToolCapability("github.repo", ToolFamily.CONNECTOR, "Metadata de repositorio GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.issues", ToolFamily.CONNECTOR, "Issues GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.pulls", ToolFamily.CONNECTOR, "Pull requests GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.branches", ToolFamily.CONNECTOR, "Ramas GitHub", CapabilityStatus.BUILT_IN, "github/rest-api-description"),
+        ToolCapability("github.actions", ToolFamily.CONNECTOR, "GitHub Actions recientes", CapabilityStatus.BUILT_IN, "github/rest-api-description")
     )
 }

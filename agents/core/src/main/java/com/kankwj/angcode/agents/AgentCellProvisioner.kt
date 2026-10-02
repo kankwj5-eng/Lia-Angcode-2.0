@@ -60,9 +60,7 @@ object AgentPermissionProfiles {
                 ToolPermission.WORKSPACE_READ,
                 ToolPermission.ARTIFACT_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
-                ToolPermission.SHIZUKU_PRIVILEGED,
-                ToolPermission.ROOT_PRIVILEGED,
-                ToolPermission.ADB_REMOTE
+                ToolPermission.ANDROID_BRIDGE
             )
             AgentRole.BUILDER -> setOf(
                 ToolPermission.WORKSPACE_READ,

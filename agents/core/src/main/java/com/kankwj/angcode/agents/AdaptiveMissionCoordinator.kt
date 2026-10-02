@@ -42,10 +42,11 @@ data class MissionCoordinatorResult(
     val taskResults: List<MissionTaskResult>,
     val stalled: Boolean,
     val isolation: MissionIsolation = MissionIsolation(false),
-    val cancelled: Boolean = false
+    val cancelled: Boolean = false,
+    val pauseReason: String? = null
 ) {
     val completed: Boolean
-        get() = !cancelled && !stalled &&
+        get() = !cancelled && !stalled && pauseReason == null &&
             session.tasks.isNotEmpty() &&
             session.tasks.all { it.task.status == AgentStatus.DONE }
 }
@@ -95,6 +96,7 @@ class AdaptiveMissionCoordinator(
         val results = mutableListOf<MissionTaskResult>()
         val stateMachine = MissionStateMachine()
         var stalled = false
+        var pauseReason: String? = null
 
         var isolation = prepareIsolation(initial, rootContext)
         val mutableContext = isolation.worktreePath?.let { path ->
@@ -113,7 +115,11 @@ class AdaptiveMissionCoordinator(
             )
 
             if (decision.runnable.isEmpty()) {
-                stalled = true
+                if (decision.deferred.isNotEmpty() && decision.reason.startsWith("paused ")) {
+                    pauseReason = decision.reason.removePrefix("paused ")
+                } else {
+                    stalled = true
+                }
                 break
             }
 
@@ -217,7 +223,8 @@ class AdaptiveMissionCoordinator(
             taskResults = results,
             stalled = stalled,
             isolation = isolation,
-            cancelled = wasCancelled
+            cancelled = wasCancelled,
+            pauseReason = pauseReason
         )
 
         if (!wasCancelled && preliminary.completed && isolation.enabled) {

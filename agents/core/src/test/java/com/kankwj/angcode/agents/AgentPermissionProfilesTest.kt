@@ -7,70 +7,34 @@ import org.junit.Test
 
 class AgentPermissionProfilesTest {
     @Test
-    fun elevatedPermissionsStillRequireParentGrant() {
-        val base = setOf(
-            ToolPermission.WORKSPACE_READ,
-            ToolPermission.PROCESS_EXECUTE
+    fun workerRolesDoNotReceivePrivilegedBackendsByDefault() {
+        val all = ToolPermission.entries.toSet()
+        val privileged = setOf(
+            ToolPermission.ROOT_PRIVILEGED,
+            ToolPermission.SHIZUKU_PRIVILEGED,
+            ToolPermission.ADB_REMOTE
         )
 
-        val testerDenied = AgentPermissionProfiles.constrainedTo(
-            AgentRole.TESTER,
-            base
-        )
-        assertFalse(ToolPermission.SHIZUKU_PRIVILEGED in testerDenied)
-
-        val testerAllowed = AgentPermissionProfiles.constrainedTo(
-            AgentRole.TESTER,
-            base + ToolPermission.SHIZUKU_PRIVILEGED
-        )
-        assertTrue(ToolPermission.SHIZUKU_PRIVILEGED in testerAllowed)
-
-        val researcherAllowed = AgentPermissionProfiles.constrainedTo(
+        listOf(
+            AgentRole.CODER,
             AgentRole.RESEARCHER,
-            setOf(
-                ToolPermission.WORKSPACE_READ,
-                ToolPermission.NETWORK,
-                ToolPermission.GITHUB_READ
+            AgentRole.TESTER,
+            AgentRole.BUILDER,
+            AgentRole.BROWSER
+        ).forEach { role ->
+            val permissions = AgentPermissionProfiles.constrainedTo(role, all)
+            assertTrue(
+                "$role heredó backend privilegiado: ${permissions.intersect(privileged)}",
+                permissions.intersect(privileged).isEmpty()
             )
-        )
-        assertTrue(ToolPermission.GITHUB_READ in researcherAllowed)
+        }
     }
+
     @Test
-    fun githubWriteAndRootRequireParentApproval() {
-        val coderBase = setOf(
-            ToolPermission.WORKSPACE_READ,
-            ToolPermission.WORKSPACE_WRITE,
-            ToolPermission.PROCESS_EXECUTE,
-            ToolPermission.GITHUB_READ
-        )
-
-        assertFalse(
-            ToolPermission.GITHUB_WRITE in
-                AgentPermissionProfiles.constrainedTo(AgentRole.CODER, coderBase)
-        )
-        assertTrue(
-            ToolPermission.GITHUB_WRITE in
-                AgentPermissionProfiles.constrainedTo(
-                    AgentRole.CODER,
-                    coderBase + ToolPermission.GITHUB_WRITE
-                )
-        )
-
-        val builderBase = setOf(
-            ToolPermission.WORKSPACE_READ,
-            ToolPermission.WORKSPACE_WRITE,
-            ToolPermission.PROCESS_EXECUTE
-        )
-        assertFalse(
-            ToolPermission.ROOT_PRIVILEGED in
-                AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, builderBase)
-        )
-        assertTrue(
-            ToolPermission.ROOT_PRIVILEGED in
-                AgentPermissionProfiles.constrainedTo(
-                    AgentRole.BUILDER,
-                    builderBase + ToolPermission.ROOT_PRIVILEGED
-                )
-        )
+    fun testerAndBuilderKeepNormalAndroidBridge() {
+        val all = ToolPermission.entries.toSet()
+        assertTrue(ToolPermission.ANDROID_BRIDGE in AgentPermissionProfiles.constrainedTo(AgentRole.TESTER, all))
+        assertTrue(ToolPermission.ANDROID_BRIDGE in AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, all))
+        assertFalse(ToolPermission.ROOT_PRIVILEGED in AgentPermissionProfiles.constrainedTo(AgentRole.BUILDER, all))
     }
 }

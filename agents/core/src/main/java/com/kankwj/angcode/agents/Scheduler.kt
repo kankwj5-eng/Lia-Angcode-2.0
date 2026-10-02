@@ -23,6 +23,24 @@ class MissionScheduler(
             task.status == AgentStatus.QUEUED && task.dependsOn.all(completed::contains)
         }
 
+        val criticalReason = when {
+            resources.availableRamMb < 384 ->
+                "ram crítica: ${resources.availableRamMb}MB"
+            resources.thermalLevel >= 4 ->
+                "presión térmica crítica: nivel ${resources.thermalLevel}"
+            resources.batteryPercent <= 5 && !resources.charging ->
+                "batería crítica: ${resources.batteryPercent}%"
+            else -> null
+        }
+
+        if (criticalReason != null) {
+            return ScheduleDecision(
+                runnable = emptyList(),
+                deferred = candidates,
+                reason = "paused $criticalReason"
+            )
+        }
+
         val thermalLimit = if (resources.thermalLevel >= 3) 1 else maxParallelWorkers
         val memoryLimit = (resources.availableRamMb / minimumRamPerWorkerMb).coerceAtLeast(1)
         val batteryLimit = if (resources.batteryPercent < 20 && !resources.charging) 1 else maxParallelWorkers

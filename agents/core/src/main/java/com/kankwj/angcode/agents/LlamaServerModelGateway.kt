@@ -23,7 +23,10 @@ data class LlamaServerHandle(
     val endpoint: String,
     val processId: String,
     val modelPath: String,
-    val port: Int
+    val port: Int,
+    val contextSize: Int,
+    val threads: Int,
+    val batchSize: Int
 )
 
 object LlamaServerManager {
@@ -37,6 +40,8 @@ object LlamaServerManager {
         executable: File,
         model: File,
         contextSize: Int = 4_096,
+        threads: Int = 4,
+        batchSize: Int = 256,
         loadTimeoutMillis: Long = 3 * 60_000L
     ): LlamaServerHandle = synchronized(lock) {
         require(executable.isFile && executable.canExecute()) {
@@ -51,6 +56,9 @@ object LlamaServerManager {
             if (
                 snapshot?.running == true &&
                 File(handle.modelPath).canonicalPath == model.canonicalPath &&
+                handle.contextSize == contextSize.coerceIn(512, 32_768) &&
+                handle.threads == threads.coerceIn(1, 16) &&
+                handle.batchSize == batchSize.coerceIn(32, 2_048) &&
                 health(handle.endpoint)
             ) {
                 return@synchronized handle
@@ -68,6 +76,8 @@ object LlamaServerManager {
                     "--host", "127.0.0.1",
                     "--port", port.toString(),
                     "-c", contextSize.coerceIn(512, 32_768).toString(),
+                    "-t", threads.coerceIn(1, 16).toString(),
+                    "-b", batchSize.coerceIn(32, 2_048).toString(),
                     "--parallel", "1"
                 ),
                 workingDirectory = model.parentFile,
@@ -93,7 +103,10 @@ object LlamaServerManager {
                     endpoint = endpoint,
                     processId = processId,
                     modelPath = model.canonicalPath,
-                    port = port
+                    port = port,
+                    contextSize = contextSize.coerceIn(512, 32_768),
+                    threads = threads.coerceIn(1, 16),
+                    batchSize = batchSize.coerceIn(32, 2_048)
                 )
                 current = handle
                 return@synchronized handle

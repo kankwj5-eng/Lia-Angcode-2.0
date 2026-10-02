@@ -45,6 +45,7 @@ object AgentPermissionProfiles {
                 ToolPermission.WORKSPACE_WRITE,
                 ToolPermission.PROCESS_EXECUTE,
                 ToolPermission.GITHUB_READ,
+                ToolPermission.GITHUB_WRITE,
                 ToolPermission.SSH_REMOTE
             )
             AgentRole.RESEARCHER -> setOf(
@@ -71,7 +72,8 @@ object AgentPermissionProfiles {
                 ToolPermission.SHIZUKU_PRIVILEGED,
                 ToolPermission.ROOT_PRIVILEGED,
                 ToolPermission.ADB_REMOTE,
-                ToolPermission.SSH_REMOTE
+                ToolPermission.SSH_REMOTE,
+                ToolPermission.GITHUB_WRITE
             )
             AgentRole.BROWSER -> setOf(
                 ToolPermission.WORKSPACE_READ,

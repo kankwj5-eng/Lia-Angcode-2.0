@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Warning
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.kankwj.angcode.runtime.InstalledRuntimeInspector
 import com.kankwj.angcode.runtime.RuntimeBootstrapInstaller
 import com.kankwj.angcode.runtime.RuntimeInstallResult
+import com.kankwj.angcode.runtime.RuntimeReleaseManager
 import com.kankwj.angcode.ui.theme.AngOrange
 import com.kankwj.angcode.ui.theme.InkWhite
 import com.kankwj.angcode.ui.theme.Muted
@@ -119,6 +121,65 @@ fun RuntimeSetupCard() {
                     color = Muted
                 )
             }
+
+            Button(
+                enabled = !installing,
+                onClick = {
+                    installing = true
+                    result = null
+
+                    scope.launch {
+                        val installResult = runCatching {
+                            withContext(Dispatchers.IO) {
+                                RuntimeReleaseManager(context)
+                                    .installLatest("dev")
+                            }
+                        }.getOrElse { error ->
+                            RuntimeInstallResult(
+                                success = false,
+                                sha256 = "",
+                                filesExtracted = 0,
+                                symlinksCreated = 0,
+                                prefix = context.filesDir.absolutePath + "/usr",
+                                detail = error.message
+                                    ?: "No se pudo descargar el runtime publicado"
+                            )
+                        }
+
+                        result = installResult
+                        status = withContext(Dispatchers.IO) {
+                            InstalledRuntimeInspector(context).inspect()
+                        }
+                        installing = false
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AngOrange,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                androidx.compose.material3.Icon(
+                    Icons.Rounded.Download,
+                    null
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (installing) {
+                        "Descargando/verificando…"
+                    } else {
+                        "Descargar runtime Dev verificado"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                "Recomendado: descarga la Release pública más reciente para tu ABI. " +
+                    "El SHA-256 publicado se vuelve a verificar dentro del teléfono.",
+                color = Muted
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(

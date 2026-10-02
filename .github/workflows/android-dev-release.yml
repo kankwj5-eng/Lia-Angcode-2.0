@@ -33,6 +33,9 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
+      - name: Static repository validation
+        run: python3 scripts/validate-repo.py
+
       - name: Run unit tests
         run: gradle -p android :runtime-core:testDebugUnitTest :agent-core:testDebugUnitTest :connector-core:testDebugUnitTest --stacktrace
 

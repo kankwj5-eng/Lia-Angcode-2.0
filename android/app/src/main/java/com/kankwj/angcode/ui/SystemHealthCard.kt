@@ -1,5 +1,7 @@
 package com.kankwj.angcode.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
@@ -21,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +44,9 @@ import com.kankwj.angcode.ui.theme.Muted
 import com.kankwj.angcode.ui.theme.Panel
 import com.kankwj.angcode.ui.theme.Success
 import com.kankwj.angcode.ui.theme.Warning as WarningColor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class HealthItem(
     val label: String,
@@ -51,7 +58,38 @@ private data class HealthItem(
 @Composable
 fun SystemHealthCard() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var refresh by remember { mutableIntStateOf(0) }
+    var diagnosticsMessage by remember { mutableStateOf<String?>(null) }
+    var pendingBundle by remember { mutableStateOf<java.io.File?>(null) }
+
+    val exportDiagnostics = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        val bundle = pendingBundle
+        if (uri != null && bundle != null) {
+            scope.launch {
+                val copied = runCatching {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { output ->
+                            bundle.inputStream().use { input ->
+                                input.copyTo(output)
+                            }
+                        } ?: error("No se pudo abrir el destino")
+                    }
+                }
+                diagnosticsMessage = copied.fold(
+                    onSuccess = { "✓ Diagnóstico exportado" },
+                    onFailure = { "✕ " + (it.message ?: "Falló la exportación") }
+                )
+                bundle.delete()
+                pendingBundle = null
+            }
+        } else {
+            bundle?.delete()
+            pendingBundle = null
+        }
+    }
 
     val items = remember(refresh) {
         val runtime = InstalledRuntimeInspector(context).inspect()
@@ -202,6 +240,38 @@ fun SystemHealthCard() {
                     Spacer(Modifier.width(4.dp))
                     Text("Revisar", fontSize = 9.sp)
                 }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        val bundle = runCatching {
+                            withContext(Dispatchers.IO) {
+                                DiagnosticBundleManager(context).create()
+                            }
+                        }.getOrElse { error ->
+                            diagnosticsMessage = "✕ " +
+                                (error.message ?: "No se pudo crear diagnóstico")
+                            return@launch
+                        }
+
+                        pendingBundle = bundle
+                        exportDiagnostics.launch(bundle.name)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Rounded.Download, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Exportar diagnóstico", fontSize = 10.sp)
+            }
+
+            diagnosticsMessage?.let {
+                Text(
+                    it,
+                    color = Muted,
+                    fontSize = 9.sp
+                )
             }
 
             items.forEach { item ->
